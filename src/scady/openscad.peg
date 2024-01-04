@@ -1,0 +1,143 @@
+//  OpenSCAD grammer for Arpeggio
+//  Copyright (C) 2024 Matthias Urlichs <matthias@urlichs.de>
+//
+//  Derived from openscad/src/core/lexer.l and …/parser.y:
+//
+//  Copyright (C) 2009-2011 Clifford Wolf <clifford@clifford.at> and
+//                          Marius Kintel <marius@kintel.net>
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version.
+//
+//  As a special exception, you have permission to link this program
+//  with the CGAL library and distribute executables, as long as you
+//  follow the requirements of the GNU GPL in regard to all of the
+//  software in the executable aside from CGAL.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+//
+
+BlockComment = r'/\\*.*?\\*/'
+LineComment = r'[/]/[^\r\n]*'
+Comment = LineComment | BlockComment
+
+Include = "include" r"<~[>\r\n]>"
+Use = "use" r"<~[>\r\n]>"
+String1 = r'"(?:[^"\\]|\\.)*"'
+String2 = r"'(?:[^'\\]|\\.)*'"
+String = String1 | String2
+
+MODULE = "module"
+FUNCTION = "function"
+IF = "if"
+ELSE = "else"
+LET = "let"
+ASSERT = "assert"
+ECHO = "echo"
+FOR = "for"
+EACH ="each"
+
+TRUE = "true"
+FALSE = "false"
+UNDEF = "undef"
+
+Number = r"([0-9]+|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)([Ee][+-])?"
+Symbol = r"\$?[a-zA-Z0-9_]+"
+
+LE = "<="
+GE = ">="
+EQ = "=="
+NEQ = "!="
+AND = "&&"
+OR = "||"
+
+Input = ( Include | Use | statement )* EOF
+
+statement = ";"
+        | '{' statement* '}'
+        | module_instantiation
+        | assignment
+        | MODULE Symbol '(' parameters ')' statement
+        | FUNCTION Symbol '(' parameters ')' '=' expr ';'
+
+assignment = Symbol '=' expr ';'
+
+module_instantiation
+        = '!' module_instantiation
+        | '#' module_instantiation
+        | '%' module_instantiation
+        | '*' module_instantiation
+        | single_module_instantiation child_statement
+        | ifelse_statement
+
+ifelse_statement = if_statement ( ELSE child_statement )?
+
+if_statement = IF '(' expr ')' child_statement
+
+child_statements = ( child_statement | assignment )*
+
+child_statement = ';' | '{' child_statements '}' | module_instantiation
+
+// "for", "let" and "each" are valid module identifiers
+module_id = Symbol // | FOR | LET | ASSERT | ECHO | EACH
+
+single_module_instantiation = module_id '(' arguments ')'
+
+expr = FUNCTION '(' parameters ')' expr
+     | LET '(' arguments ')' expr
+     | ASSERT '(' arguments ')' expr_or_empty
+     | ECHO '(' arguments ')' expr_or_empty
+     | logic_or ( '?' expr ':' expr )?
+
+logic_or = logic_and ( OR logic_and )*
+logic_and = equality ( AND equality )*
+equality = comparison ( ( EQ | NEQ ) comparison )*
+comparison = addition ( ( '>' | GE | '<' | LE ) addition )*
+addition = multiplication ( ( '+' | '-') multiplication )*
+multiplication = unary ( ( '*' | '/' | '%') unary )*
+unary = exponent | ( '+' | '-' | '!')? exponent
+exponent = call ( '^' unary )?
+call = primary addon*
+addon = '(' arguments ')'
+     | '[' expr ']'
+     | '.' Symbol
+primary = TRUE | FALSE  | UNDEF | Number | String | Symbol
+        | '(' expr ')'
+        | '[' expr ':' expr ']'
+        | '[' expr ':' expr ':' expr ']'
+        | '[' ']'
+        | '[' vector_elements optional_trailing_comma ']'
+
+expr_or_empty = expr?
+
+list_comprehension_elements
+        = LET '(' arguments ')' list_comprehension_elements_p
+        | EACH vector_element
+        | FOR '(' arguments ')' vector_element
+        | FOR '(' arguments ';' expr ';' arguments ')' vector_element
+        | IF '(' expr ')' vector_element ( ELSE vector_element )?
+
+list_comprehension_elements_p
+        = list_comprehension_elements
+        | '(' list_comprehension_elements ')'
+
+optional_trailing_comma = ',' ?
+
+vector_elements = vector_element ( "," vector_element )*
+vector_element = list_comprehension_elements_p | expr
+parameters = ( parameter_list optional_trailing_comma )?
+parameter_list = parameter ( ',' parameter )*
+parameter = Symbol ( '=' expr )?
+arguments = ( argument_list optional_trailing_comma )?
+argument_list = argument ( ',' argument )*
+argument = ( Symbol '=' )? expr
+
