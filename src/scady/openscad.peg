@@ -44,11 +44,12 @@ LET = "let"
 ASSERT = "assert"
 ECHO = "echo"
 FOR = "for"
-EACH ="each"
+EACH = "each"
 
 TRUE = "true"
 FALSE = "false"
 UNDEF = "undef"
+PI = "PI"
 
 Number = r"([0-9]+|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)([Ee][+-])?"
 Symbol = r"\$?[a-zA-Z0-9_]+"
@@ -62,22 +63,20 @@ OR = "||"
 
 Input = ( Include | Use | statement )* EOF
 
-statement = ";"
-        | '{' statement* '}'
-        | module_instantiation
-        | assignment
-        | MODULE Symbol '(' parameters ')' statement
-        | FUNCTION Symbol '(' parameters ')' '=' expr ';'
+statement = stmt_empty | stmt_list | module_instantiation | assignment | stmt_decl_mod | stmt_decl_fn 
+stmt_empty = ";"
+stmt_list = '{' statement* '}'
+stmt_decl_mod = MODULE Symbol '(' parameters ')' statement
+stmt_decl_fn = FUNCTION Symbol '(' parameters ')' '=' expr ';'
 
 assignment = Symbol '=' expr ';'
 
-module_instantiation
-        = '!' module_instantiation
-        | '#' module_instantiation
-        | '%' module_instantiation
-        | '*' module_instantiation
-        | single_module_instantiation child_statement
-        | ifelse_statement
+module_instantiation = mod_inst_bang | mod_inst_hash | mod_inst_perc | mod_inst_star | mod_inst_child | ifelse_statement
+mod_inst_bang = '!' module_instantiation
+mod_inst_hash = '#' module_instantiation
+mod_inst_perc = '%' module_instantiation
+mod_inst_star = '*' module_instantiation
+mod_inst_child = fn_call child_statement
 
 ifelse_statement = if_statement ( ELSE child_statement )?
 
@@ -85,18 +84,21 @@ if_statement = IF '(' expr ')' child_statement
 
 child_statements = ( child_statement | assignment )*
 
-child_statement = ';' | '{' child_statements '}' | module_instantiation
+child_statement = no_child | explicit_child | module_instantiation
+no_child = ";"
+explicit_child = '{' child_statements '}'
 
 // "for", "let" and "each" are valid module identifiers
 module_id = Symbol // | FOR | LET | ASSERT | ECHO | EACH
 
-single_module_instantiation = module_id '(' arguments ')'
+fn_call = module_id '(' arguments ')'
 
-expr = FUNCTION '(' parameters ')' expr
-     | LET '(' arguments ')' expr
-     | ASSERT '(' arguments ')' expr_or_empty
-     | ECHO '(' arguments ')' expr_or_empty
-     | logic_or ( '?' expr ':' expr )?
+expr = expr_fn | expr_let | expr_echo | expr_case
+expr_fn = FUNCTION '(' parameters ')' expr
+expr_let = LET '(' arguments ')' expr
+expr_assert = ASSERT '(' arguments ')' expr_or_empty
+expr_echo = ECHO '(' arguments ')' expr_or_empty
+expr_case = logic_or ( '?' expr ':' expr )?
 
 logic_or = logic_and ( OR logic_and )*
 logic_and = equality ( AND equality )*
@@ -107,28 +109,36 @@ multiplication = unary ( ( '*' | '/' | '%') unary )*
 unary = exponent | ( '+' | '-' | '!')? exponent
 exponent = call ( '^' unary )?
 call = primary addon*
-addon = '(' arguments ')'
-     | '[' expr ']'
-     | '.' Symbol
-primary = TRUE | FALSE  | UNDEF | Number | String | Symbol
-        | '(' expr ')'
-        | '[' expr ':' expr ']'
-        | '[' expr ':' expr ':' expr ']'
-        | '[' ']'
-        | '[' vector_elements optional_trailing_comma ']'
+addon = add_args | add_index | add_member
+add_args = '(' arguments ')'
+add_index = '[' expr ']'
+add_member = '.' Symbol
+
+primary = pr_true | pr_false | pr_undef | pr_Num | pr_PI | pr_Str | pr_Sym | pr_paren | pr_for2 | pr_for3 | pr_vec_empty | pr_vec_elems
+pr_true = TRUE
+pr_false = FALSE
+pr_undef = UNDEF
+pr_Num = Number
+pr_Str = String
+pr_Sym = Symbol
+pr_PI = PI
+pr_paren = '(' expr ')'
+pr_for2 = '[' expr ':' expr ']'
+pr_for3 = '[' expr ':' expr ':' expr ']'
+pr_vec_empty = '[' ']'
+pr_vec_elems = '[' vector_elements optional_trailing_comma ']'
 
 expr_or_empty = expr?
 
-list_comprehension_elements
-        = LET '(' arguments ')' list_comprehension_elements_p
-        | EACH vector_element
-        | FOR '(' arguments ')' vector_element
-        | FOR '(' arguments ';' expr ';' arguments ')' vector_element
-        | IF '(' expr ')' vector_element ( ELSE vector_element )?
+list_comprehension_elements = lce_let | lce_each | lce_for | lce_for3 | lce_if
+lce_let = LET '(' arguments ')' list_comprehension_elements_p
+lce_each = EACH vector_element
+lce_for = FOR '(' arguments ')' vector_element
+lce_for3 = FOR '(' arguments ';' expr ';' arguments ')' vector_element
+lce_if = IF '(' expr ')' vector_element ( ELSE vector_element )?
 
-list_comprehension_elements_p
-        = list_comprehension_elements
-        | '(' list_comprehension_elements ')'
+list_comprehension_elements_p = list_comprehension_elements | lcep_b
+lcep_b = '(' list_comprehension_elements ')'
 
 optional_trailing_comma = ',' ?
 
