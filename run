@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+if os.path.exists("src/scady"):
+    sys.path.insert(0, "./src")
+
+from scady.__main__ import main
+main()
