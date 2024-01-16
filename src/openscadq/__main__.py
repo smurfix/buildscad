@@ -1,7 +1,7 @@
 import sys
 
 from pathlib import Path
-from scady.peg import Parser
+from openscadq.peg import Parser
 from traceback import print_exc
 from .main import process
 from cadquery import exporters as exp

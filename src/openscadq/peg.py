@@ -1,5 +1,5 @@
 #######################################################################
-# Name: scady/peg.py
+# Name: openscadq/peg.py
 # Purpose: This module is a variation of the original peg.py.
 #   The syntax is slightly changed to be more readable.
 # Copyright: (c) 2024 Matthias Urlichs <matthias@urlichs.de>
