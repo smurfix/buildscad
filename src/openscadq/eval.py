@@ -53,6 +53,10 @@ class Eval:
             env = MainEnv()
         self.env = env
 
+    def set(self, k,v):
+        """(forcibly) set a value"""
+        self.env.vars.set(k, v)
+
     def _eval(self, n, e):
         try:
             p = getattr(self,f"_e_{n.rule_name}")

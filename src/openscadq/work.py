@@ -18,9 +18,15 @@ class EnvCall:
 class Env:
     current_call = None
 
-    def __init__(self, name:str|None = None, parent:Env|None = None, init:dict|None=None):
-        self.vars = Vars(name=name, parent=parent.vars if parent else None, init=init)
-        self.parent = parent
+    def __init__(self, parent:Env|Vars, name:str|None = None, init:dict|None=None):
+        if isinstance(parent,Env):
+            self.parent = parent
+            self.vars = parent.vars.child(name, init=init)
+        else:
+            if init is not None:
+                raise ValueError("invalid")
+            self.vars = parent
+            self.parent = parent
 
     def __getitem__(self, k):
         if k == "$children":
@@ -115,8 +121,9 @@ class Env:
 
         
 class MainEnv(Env):
-    def __init__(self):
-        super().__init__(self)
+    def __init__(self, write_once:bool=True):
+        vars = Vars(name="_main", write_once=write_once)
+        super().__init__(parent=vars, name="_main")
         self.vars['$fn'] = 999
         self.vars['$fa'] = 0
         self.vars['$fs'] = 0.001
