@@ -321,13 +321,12 @@ class Eval:
             v = self._eval(n[off], e)
             if len(v) == 1:
                 a.append(v[0])
+            elif v[0] in k:
+                raise ValueError("already set",n[off])
+            elif v[0].startswith("$"):
+                e.set_cc(v[0], v[1])
             else:
-                if v[0] in k:
-                    raise ValueError("already set",n[off])
-                if v[0].startswith("$"):
-                    e.set_cc(v[0], v[1])
-                else:
-                    k[v[0]] = v[1]
+                k[v[0]] = v[1]
             off += 2
         return a,k
 
@@ -357,9 +356,9 @@ class Eval:
             v = self._eval(n[off], e)
             if len(v) == 1:
                 a.append(v[0])
+            elif v[0] in k:
+                raise ValueError("already set",n[off])
             else:
-                if v[0] in k:
-                    raise ValueError("already set",n[off])
                 k[v[0]] = v[1]
             off += 2
         return a,k
