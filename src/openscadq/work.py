@@ -121,8 +121,8 @@ class Env:
 
         
 class MainEnv(Env):
-    def __init__(self, write_once:bool=True):
-        vars = Vars(name="_main", write_once=write_once)
+    def __init__(self):
+        vars = Vars(name="_main")
         super().__init__(parent=vars, name="_main")
         self.vars['$fn'] = 999
         self.vars['$fa'] = 0
