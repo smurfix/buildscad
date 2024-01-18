@@ -242,6 +242,11 @@ class Eval:
     def _e_call(self,n,e):
         res = self._eval(n[0], e)
         off = 1
+        if off < len(n):
+            with e.cc(res):
+                app = self._eval(n[off], e)
+                res = app(res)
+            off += 1
         while off < len(n):
             app = self._eval(n[off], e)
             res = app(res)
@@ -310,7 +315,10 @@ class Eval:
             else:
                 if v[0] in k:
                     raise ValueError("already set",n[off])
-                k[v[0]] = v[1]
+                if v[0].startswith("$"):
+                    e.set_cc(v[0], v[1])
+                else:
+                    k[v[0]] = v[1]
             off += 2
         return a,k
 

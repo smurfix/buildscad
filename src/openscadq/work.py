@@ -4,8 +4,20 @@ import cadquery as cq
 from .vars import Vars
 from functools import partial
 import math
+from contextlib import contextmanager
+
+class EnvCall:
+    def __init__(self, fn, env):
+        self.fn = fn
+        self.env = env
+        self.is_new = False
+
+    def __call__(self, *a, **k):
+        return self.env.vars[self.fn](*a, _env=self.env, **k)
 
 class Env:
+    current_call = None
+
     def __init__(self, name:str|None = None, parent:Env|None = None, init:dict|None=None):
         self.vars = Vars(name=name, parent=parent.vars if parent else None, init=init)
         self.parent = parent
@@ -19,8 +31,29 @@ class Env:
             return getattr(self,k)
         else:
             if callable(fn):
-                fn = partial(fn, _env=self)
+                fn = EnvCall(k, env=self)
             return fn
+
+    def set_cc(self, k, v):
+        if self.current_call is None:
+            self.vars[k] = v
+        else:
+            cc = self.current_call
+            if not cc.is_new:
+                cc.is_new = True
+                cc.env = Env(name=cc.fn, parent=cc.env)
+            cc.env.vars[k] = v
+
+    @contextmanager
+    def cc(self, fn):
+        if isinstance(fn,EnvCall):
+            self.current_call,cc = fn,self.current_call
+            try:
+                yield self
+            finally:
+                self.current_call = cc
+        else:
+            yield self
 
     PI = math.pi
 
