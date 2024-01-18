@@ -113,3 +113,10 @@ class Env:
         raise NotImplementedError("Child vectors")
 
         
+class MainEnv(Env):
+    def __init__(self):
+        super().__init__(self)
+        self.vars['$fn'] = 999
+        self.vars['$fa'] = 0
+        self.vars['$fs'] = 0.001
+        self.vars['$preview'] = 0

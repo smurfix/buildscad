@@ -1,6 +1,6 @@
 import cadquery as cq
 from arpeggio import PTNodeVisitor
-from .work import Env
+from .work import Env, MainEnv
 from functools import partial
 import sys
 import math
@@ -45,7 +45,7 @@ class Eval:
     def __init__(self, nodes, env:Env|None=None):
         self.nodes = nodes
         if env is None:
-            env = Env(name="_main")
+            env = MainEnv()
         self.env = env
 
     def _eval(self, n, e):
