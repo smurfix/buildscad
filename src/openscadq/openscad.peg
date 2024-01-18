@@ -49,7 +49,6 @@ EACH = "each"
 TRUE = "true"
 FALSE = "false"
 UNDEF = "undef"
-PI = "PI"
 
 Number = r"([0-9]+|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)([Ee][+-])?"
 Symbol = r"\$?[a-zA-Z0-9_]+"
@@ -114,14 +113,13 @@ add_args = '(' arguments ')'
 add_index = '[' expr ']'
 add_member = '.' Symbol
 
-primary = pr_true | pr_false | pr_undef | pr_Num | pr_PI | pr_Str | pr_Sym | pr_paren | pr_for2 | pr_for3 | pr_vec_empty | pr_vec_elems
+primary = pr_true | pr_false | pr_undef | pr_Num | pr_Str | pr_Sym | pr_paren | pr_for2 | pr_for3 | pr_vec_empty | pr_vec_elems
 pr_true = TRUE
 pr_false = FALSE
 pr_undef = UNDEF
 pr_Num = Number
 pr_Str = String
 pr_Sym = Symbol
-pr_PI = PI
 pr_paren = '(' expr ')'
 pr_for2 = '[' expr ':' expr ']'
 pr_for3 = '[' expr ':' expr ':' expr ']'

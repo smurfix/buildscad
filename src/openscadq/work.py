@@ -3,6 +3,7 @@ from __future__ import annotations
 import cadquery as cq
 from .vars import Vars
 from functools import partial
+import math
 
 class Env:
     def __init__(self, name:str|None = None, parent:Env|None = None, init:dict|None=None):
@@ -18,6 +19,8 @@ class Env:
             if callable(fn):
                 fn = partial(fn, _env=self)
             return fn
+
+    PI = math.pi
 
     def echo(self, *a):
         print("ECHO:", ", ".join(repr(x) for x in a))
