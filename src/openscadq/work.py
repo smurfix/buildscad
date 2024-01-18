@@ -19,6 +19,9 @@ class Env:
                 fn = partial(fn, _env=self)
             return fn
 
+    def echo(self, *a):
+        print("ECHO:", ", ".join(repr(x) for x in a))
+
     def sphere(self, r=None, d=None):
         if r is None:
             r = d/2

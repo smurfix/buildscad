@@ -258,6 +258,9 @@ class Eval:
     def _e_pr_Sym(self,n,e):
         return e[n.value]
 
+    def _e_pr_Str(self,n,e):
+        return eval(n.value)
+
     def _e_assignment(self, n, e):
         self.env.vars[n[0].value] = self._eval(n[2], e)
 
