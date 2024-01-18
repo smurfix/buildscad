@@ -24,7 +24,12 @@ class Env:
 
     PI = math.pi
 
-    def echo(self, *a):
+    def echo(self, *a, **k):
+        class DE:
+            def __repr__(self):
+                return ", ".join(f"{k} = {v !r}" for k,v in k.items())
+        if k:
+            a = a+(DE(),)
         print("ECHO:", ", ".join(repr(x) for x in a))
 
     def sphere(self, r=None, d=None):
