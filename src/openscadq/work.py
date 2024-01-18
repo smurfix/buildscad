@@ -56,6 +56,7 @@ class Env:
             yield self
 
     PI = math.pi
+    undef = None
 
     def echo(self, *a, **k):
         class DE:
