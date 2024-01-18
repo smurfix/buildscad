@@ -29,11 +29,16 @@ class Function:
 
         p.update(kw)
         off = 0
+        vl = self.params[0] + list(self.params[1].keys())
         for v in a:
-            while pa[off] in p:
-                off += 1
-            p[pa[off]] = v
+            p[vl[off]] = v
             off += 1
+        for v in vl:
+            if v.startswith('$') and v in _env.vars:
+                p[v] = _env[v]
+            elif v not in p:
+                warnings.warn(f"no value for {v !r}")
+                p[v] = None
 
         e = Eval(nodes=self.body, env=Env(name=self.name, parent=_env, init=p))
         return e.eval()
