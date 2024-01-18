@@ -11,6 +11,8 @@ class Env:
         self.parent = parent
 
     def __getitem__(self, k):
+        if k == "$children":
+            return len(self.vars["_e_children"])
         try:
             fn = self.vars[k]
         except KeyError:
