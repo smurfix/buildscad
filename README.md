@@ -33,7 +33,8 @@ don't have to deal with them.
 Corollary: Don't even think of creating a six-sided polygon by using
 ``circle(r=2, $fn=6``) with this code.
 
-Speed could probably be improved.
+Speed could probably be improved; on the other hand, let's face it,
+OpenSCAD's mesh rendering can be slow as molasses.
 
 There is no (general) ``minkowski`` operator.
 
