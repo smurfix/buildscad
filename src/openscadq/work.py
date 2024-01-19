@@ -141,11 +141,11 @@ class Env:
             res = res.translate([0,0,-h/2])
         return res
 
-    def translate(self, vec):
+    def translate(self, v):
         ch = self.children()
         if ch is None:
             return None
-        return ch.translate(vec)
+        return ch.translate(v)
 
     def children(self, idx=None):
         ws = None
