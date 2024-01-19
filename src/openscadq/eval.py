@@ -453,13 +453,10 @@ class Eval:
     def _e_mod_inst_child(self,n,e):
         if len(n) == 1:
             return self._eval(n[0], e)
+        arity(n,2)
 
-        off = len(n)-1
-        res = self._eval(n[off], e)
-        while off:
-            off -= 1
-            res = self._eval(n[off], Env(parent=e, init=dict(_e_children=res)))
-        return res
+        e = Env(parent=e, init=dict(_e_children=n[1]))
+        return self._eval(n[0], e)
 
     def _e_no_child(self,n,e):
         return None
