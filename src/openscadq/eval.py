@@ -1,5 +1,4 @@
 import cadquery as cq
-from arpeggio import PTNodeVisitor
 from .work import Env, MainEnv
 from .peg import Parser
 from pathlib import Path
@@ -28,7 +27,6 @@ class Function:
 
     def __call__(self, *a, _env, **kw):
         p = dict(**self.params[1])
-        pa = self.params[0]
 
         p.update(kw)
         off = 0
@@ -313,7 +311,7 @@ class Eval:
             elif n[0].value == "!":
                 res = not res
             else:
-                raise ValueError("Unknown op",n[off])
+                raise ValueError("Unknown op",n[0])
         return res
 
     def _e_exponent(self,n,e):
@@ -325,7 +323,7 @@ class Eval:
         if n[1].value == "^":
             return math.pow(res,exp)
         else:
-            raise ValueError("Unknown op",n[off])
+            raise ValueError("Unknown op",n[1])
 
     def _e_call(self,n,e):
         res = self._eval(n[0], e)
@@ -479,7 +477,7 @@ class Eval:
         return self._eval(n, e)
 
     def _e_child_statement(self,n,e):
-        arity(n,1);
+        arity(n,1)
         return self._eval(n[0],e)
 
     def _e_pr_true(self,n,e):

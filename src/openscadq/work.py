@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import cadquery as cq
 from .vars import Vars
-from functools import partial
 import math
 from contextlib import contextmanager
+import warnings
 
 class EnvCall:
     def __init__(self, fn, env):
