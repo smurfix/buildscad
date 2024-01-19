@@ -50,8 +50,8 @@ TRUE = "true"
 FALSE = "false"
 UNDEF = "undef"
 
-Number = r"([0-9]+|[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)([Ee][+-])?"
-Symbol = r"\$?[a-zA-Z0-9_]+"
+Number = r"([0-9]*\.[0-9]+|[0-9]+\.[0-9]*|[0-9]+)([Ee][+-])?"
+Symbol = r"\$?[a-zA-Z][a-zA-Z0-9_]*"
 
 LE = "<="
 GE = ">="
