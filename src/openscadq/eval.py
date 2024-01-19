@@ -169,7 +169,10 @@ class Eval:
         if self.defs:
             raise RuntimeError("This shouldn't happen")
         e = Env(parent=e)
+
         return self._e__list(n[1:-1],e)
+
+    _e_explicit_child = _e_stmt_list
 
     def _e_pr_vec_empty(self,n,e):
         return ()
@@ -476,12 +479,39 @@ class Eval:
         return self._eval(n, e)
 
     def _e_child_statement(self,n,e):
-        # returns the tree, does not evaluate.
         arity(n,1);
-#       if n[0].rule_name != "no_child":
-#           breakpoint()
-        return n[0]
+        return self._eval(n[0],e)
 
+    def _e_pr_true(self,n,e):
+        return True
+
+    def _e_pr_false(self,n,e):
+        return False
+
+    def _e_pr_undef(self,n,e):
+        return None
+
+    def _e_mod_inst_bang(self,n,e):
+        "!foo: isolated"
+        warnings.warn("Object isolation is not yet supported")
+        return self._eval(n[1],e)
+
+    def _e_mod_inst_hash(self,n,e):
+        "#foo: highlighted"
+        warnings.warn("Object highlighting is not yet supported")
+        return self._eval(n[1],e)
+
+    def _e_mod_inst_perc(self,n,e):
+        "%foo: transparent"
+        warnings.warn("Object transparency is not yet supported")
+        return self._eval(n[1],e)
+
+    def _e_mod_inst_star(self,n,e):
+        "*foo: disabled"
+        return None
+
+    def _e_child_statements(self,n,e):
+        return self._e__list(n,e)
 
     _e_primary = _e__descend
     _e_module_instantiation = _e__descend

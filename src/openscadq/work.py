@@ -77,6 +77,8 @@ class Env:
 
     PI = math.pi
     undef = None
+    def version(self):
+        return "0.1.0"
 
     def echo(self, *a, **k):
         class DE:
