@@ -379,7 +379,7 @@ class Eval:
             print(" "*self.level,"=",n)
 
         arity(n,3,4)
-        e.eval = self.eval
+        e.eval = partial(self.eval,env=e)
         try:
             fn = e[n[0].value]
         except AttributeError:
