@@ -81,7 +81,7 @@ class Env:
             r = d/2
         return cq.Workplane("XY").sphere(r)
 
-    def cube(self, size, center=False):
+    def cube(self, size=1, center=False):
         if isinstance(size,(int,float)):
             x,y,z = size,size,size
         else:
@@ -91,16 +91,30 @@ class Env:
             res = res.translate((x/2,y/2,z/2))
         return res
 
-    def cylinder(self, h, r=None, r1=None, r2=None, d=None, d1=None,
+    def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None,
             d2=None, center=False):
+        if (
+                (r1 is not None) +
+                (r2 is not None) +
+                (d1 is not None) +
+                (d2 is not None) +
+                2*(r is not None) + 2*(d is not None)
+            ) > 2 or (r1 is not None and d1 is not None) or (r2 is not None and d2 is not None):
+            warnings.warn("cylinder: parameters are ambiguous")
+
         if r is not None:
             r1 = r2 = r
-        elif d is not None:
-            r1 = r2 = r
+        if d is not None:
+            r1 = r2 = d/2
         if d1 is not None:
             r1 = d1/2
         if d2 is not None:
             r2 = d1/2
+
+        if r1 is None:
+            r1 = 1
+        if r2 is None:
+            r2 = 1
 
         res = cq.Workplane("XY").circle(r1)
         if r1 == r2:
