@@ -5,11 +5,15 @@ from __future__ import annotations
 
 import warnings
 
+
 class Vars:
     """
     This is a quick-and-dirty hierarchical data storage.
     """
-    def __init__(self, name:str|None = None, parent:Vars|None = None, init:dict|None=None):
+
+    def __init__(
+        self, name: str | None = None, parent: Vars | None = None, init: dict | None = None,
+    ):
         self._data = dict()
         self._p = parent
         self._name = name
@@ -23,11 +27,11 @@ class Vars:
         """force set a value even if otherwise immutable"""
         self._data[k] = v
 
-    def child(self, name, init:dict|None=None):
+    def child(self, name, init: dict | None = None):
         """return a sub-scope"""
         return Vars(name=name, parent=self, init=init)
 
-    def inject(self, np:Vars):
+    def inject(self, np: Vars):
         """inject values in "np" into the current list"""
         np = Vars(name=np._name, init=np._data)
         np._p = self._p

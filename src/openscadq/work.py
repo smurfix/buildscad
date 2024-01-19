@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import cadquery as cq
-from .vars import Vars
 import math
-from contextlib import contextmanager
 import warnings
+from contextlib import contextmanager
+
+from .vars import Vars
+
+import cadquery as cq
+
 
 class EnvCall:
     def __init__(self, fn, env):
@@ -16,12 +19,19 @@ class EnvCall:
         vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
         return vars[self.fn](*a, _env=self.env, **k)
 
+
 class Env:
     current_call = None
     eval = None
 
-    def __init__(self, parent:Env|Vars, name:str|None = None, init:dict|None=None, vars_dyn:Vars=None):
-        if isinstance(parent,Env):
+    def __init__(
+        self,
+        parent: Env | Vars,
+        name: str | None = None,
+        init: dict | None = None,
+        vars_dyn: Vars = None,
+    ):
+        if isinstance(parent, Env):
             self.parent = parent
             self.vars = parent.vars.child(name, init=init)
             self.vars_dyn = vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name)
@@ -38,7 +48,7 @@ class Env:
         try:
             fn = (self.vars_dyn if k[0] == "$" else self.vars)[k]
         except KeyError:
-            return getattr(self,k)
+            return getattr(self, k)
         else:
             if isinstance(fn, EnvCall):
                 pass
@@ -66,8 +76,8 @@ class Env:
 
     @contextmanager
     def cc(self, fn):
-        if isinstance(fn,EnvCall):
-            self.current_call,cc = fn,self.current_call
+        if isinstance(fn, EnvCall):
+            self.current_call, cc = fn, self.current_call
             try:
                 yield self
             finally:
@@ -77,15 +87,17 @@ class Env:
 
     PI = math.pi
     undef = None
+
     def version(self):
         return "0.1.0"
 
     def echo(self, *a, **k):
         class DE:
             def __repr__(self):
-                return ", ".join(f"{k} = {v !r}" for k,v in k.items())
+                return ", ".join(f"{k} = {v !r}" for k, v in k.items())
+
         if k:
-            a = a+(DE(),)
+            a = a + (DE(),)
         print("ECHO:", ", ".join(repr(x) for x in a))
 
     def sphere(self, r=None, d=None):
@@ -93,41 +105,46 @@ class Env:
             if d is None:
                 r = 1
             else:
-                r = d/2
+                r = d / 2
         elif d is not None:
             warnings.warn("sphere: parameters are ambiguous")
 
         return cq.Workplane("XY").sphere(r)
 
     def cube(self, size=1, center=False):
-        if isinstance(size,(int,float)):
-            x,y,z = size,size,size
+        if isinstance(size, (int, float)):
+            x, y, z = size, size, size
         else:
-            x,y,z = size
-        res = cq.Workplane("XY").box(x,y,z)
+            x, y, z = size
+        res = cq.Workplane("XY").box(x, y, z)
         if not center:
-            res = res.translate((x/2,y/2,z/2))
+            res = res.translate((x / 2, y / 2, z / 2))
         return res
 
-    def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None,
-            d2=None, center=False):
+    def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None, d2=None, center=False):
         if (
-                (r1 is not None) +
-                (r2 is not None) +
-                (d1 is not None) +
-                (d2 is not None) +
-                2*(r is not None) + 2*(d is not None)
-            ) > 2 or (r1 is not None and d1 is not None) or (r2 is not None and d2 is not None):
+            (
+                (r1 is not None)
+                + (r2 is not None)
+                + (d1 is not None)
+                + (d2 is not None)
+                + 2 * (r is not None)
+                + 2 * (d is not None)
+            )
+            > 2
+            or (r1 is not None and d1 is not None)
+            or (r2 is not None and d2 is not None)
+        ):
             warnings.warn("cylinder: parameters are ambiguous")
 
         if r is not None:
             r1 = r2 = r
         if d is not None:
-            r1 = r2 = d/2
+            r1 = r2 = d / 2
         if d1 is not None:
-            r1 = d1/2
+            r1 = d1 / 2
         if d2 is not None:
-            r2 = d1/2
+            r2 = d1 / 2
 
         if r1 is None:
             r1 = 1
@@ -140,7 +157,7 @@ class Env:
         else:
             res = res.workplane(offset=h).circle(r2).loft(combine=True)
         if center:
-            res = res.translate([0,0,-h/2])
+            res = res.translate([0, 0, -h / 2])
         return res
 
     def translate(self, v):
@@ -154,16 +171,16 @@ class Env:
         if ch is None:
             return None
         if v is not None:
-            return ch.rotate((0,0,0),v,a)
-        elif isinstance(a,(float,int)):
-            return ch.rotate((0,0,0),(0,0,1),a)
+            return ch.rotate((0, 0, 0), v, a)
+        elif isinstance(a, (float, int)):
+            return ch.rotate((0, 0, 0), (0, 0, 1), a)
         else:
             if a[0]:
-                ch = ch.rotate((0,0,0),(1,0,0),a[0])
+                ch = ch.rotate((0, 0, 0), (1, 0, 0), a[0])
             if a[1]:
-                ch = ch.rotate((0,0,0),(0,1,0),a[1])
+                ch = ch.rotate((0, 0, 0), (0, 1, 0), a[1])
             if a[2]:
-                ch = ch.rotate((0,0,0),(0,0,1),a[2])
+                ch = ch.rotate((0, 0, 0), (0, 0, 1), a[2])
             return ch
 
     def difference(self):
@@ -211,7 +228,7 @@ class Env:
             return cws
 
         ws = cq.Workplane("XY")
-        if isinstance(idx,int):
+        if isinstance(idx, int):
             ws.add(cws.objects[idx])
         else:
             # assume it's a slice
@@ -219,12 +236,12 @@ class Env:
                 ws.add(obj)
         return ws
 
-        
+
 class MainEnv(Env):
     def __init__(self, name="_main", vars_dyn=None):
         vars = Vars(name=name)
         super().__init__(parent=vars, name=name, vars_dyn=vars_dyn)
-        self.vars['$fn'] = 999
-        self.vars['$fa'] = 0
-        self.vars['$fs'] = 0.001
-        self.vars['$preview'] = 0
+        self.vars["$fn"] = 999
+        self.vars["$fa"] = 0
+        self.vars["$fs"] = 0.001
+        self.vars["$preview"] = 0
