@@ -30,6 +30,12 @@ class Vars:
         """return a sub-scope"""
         return Vars(name=name, parent=self, init=init)
 
+    def inject(self, np:Vars):
+        """inject values in "np" into the current list"""
+        np = Vars(name=np._name, init=np._data)
+        np._p = self._p
+        self._p = np
+
     def __getitem__(self, k):
         try:
             res = self._data[k]

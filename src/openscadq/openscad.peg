@@ -30,8 +30,8 @@ BlockComment = r'/\\*.*?\\*/'
 LineComment = r'[/]/[^\r\n]*'
 Comment = LineComment | BlockComment
 
-Include = "include" r"<~[>\r\n]>"
-Use = "use" r"<~[>\r\n]>"
+Include = "include" r"<[^>\r\n]*>"
+Use = "use" r"<[^>\r\n]*>"
 String1 = r'"(?:[^"\\]|\\.)*"'
 String2 = r"'(?:[^'\\]|\\.)*'"
 String = String1 | String2

@@ -1,6 +1,8 @@
 import cadquery as cq
 from arpeggio import PTNodeVisitor
 from .work import Env, MainEnv
+from .peg import Parser
+from pathlib import Path
 from functools import partial
 import sys
 import math
@@ -102,6 +104,39 @@ class Eval:
                 warnings.warn(f"Unknown result: {r !r}")
         return ws
 
+    def _e_Include(self, n, e):
+        """'include' statement.
+
+        Adds the file as if it was textually included, except that
+        variables from the included file can be overridden.
+        """
+        arity(n,2)
+        p = Parser(debug=False, reduce_tree=False)
+        fn = Path(n[1].value[1:-1])
+        tree = p.parse(fn.read_text())
+        ep = Env(parent=e, name=str(fn))
+        res = self._eval(tree, ep)
+        e.inject_vars(ep)
+        return res
+
+    def _e_Use(self, n, e):
+        """'use' statement.
+
+        Add the variables and functions defined by the used module (but
+        *not* and that it itself imports via 'use'!) to the current scope.
+        """
+        arity(n,2)
+        p = Parser(debug=False, reduce_tree=False)
+        fn = Path(n[1].value[1:-1])
+        tree = p.parse(fn.read_text())
+
+        ep = MainEnv(name=str(fn))
+        try:
+            self.no_exec = True
+            self._eval(tree, ep)
+        finally:
+            self.no_exec = False
+        e.inject_vars(ep)
 
     def _e__descend(self, n, e):
         arity(n,1)

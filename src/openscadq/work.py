@@ -40,6 +40,9 @@ class Env:
                 fn = EnvCall(k, env=self)
             return fn
 
+    def inject_vars(self, env):
+        self.vars.inject(env.vars)
+
     def set_cc(self, k, v):
         if self.current_call is None:
             self.vars[k] = v
