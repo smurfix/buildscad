@@ -348,7 +348,7 @@ class Eval:
             params = self._eval(n[3],e)
         else:
             params = ((),{})
-        body = n[5]
+        body = n[-1]
         e.vars[name] = Module(name,params,body,e)
 
     def _e_fn_call(self,n,e):
