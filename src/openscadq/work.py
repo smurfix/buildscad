@@ -138,7 +138,7 @@ class Env:
         else:
             res = res.workplane(offset=h).circle(r2).loft(combine=True)
         if center:
-            res = res.translate([0,0,h/2])
+            res = res.translate([0,0,-h/2])
         return res
 
     def translate(self, vec):
