@@ -47,11 +47,14 @@ class Module(Function):
     pass
 
 class Eval:
-    def __init__(self, nodes, env:Env|None=None):
+
+    def __init__(self, nodes, env:Env|None=None, debug:bool = False):
         self.nodes = nodes
         if env is None:
             env = MainEnv()
         self.env = env
+        self.debug = debug
+        self.level = 0
 
     def set(self, k,v):
         """(forcibly) set a value"""
@@ -60,6 +63,10 @@ class Eval:
     def _eval(self, n, e):
         try:
             p = getattr(self,f"_e_{n.rule_name}")
+            self.level += 1
+            if self.debug:
+                print(" "*self.level,">",n.rule_name)
+
         except AttributeError:
             if not n.rule_name:
                 breakpoint()
@@ -67,11 +74,16 @@ class Eval:
             print(n.tree_str())
             sys.exit(1)
         try:
-            return p(n,e)
+            res = p(n,e)
         except ArityError:
             print(f"ParamCount: {n.rule_name}")
             print(n.tree_str())
             sys.exit(1)
+        finally:
+            self.level -= 1
+        if self.debug:
+            print(" "*self.level,"<",res)
+        return res
 
     def _e_Input(self, n, e):
         ws = None
@@ -299,6 +311,9 @@ class Eval:
         e.vars[name] = Module(name,params,body,e)
 
     def _e_fn_call(self,n,e):
+        if self.debug:
+            print(" "*self.level,"=",n)
+
         arity(n,3,4)
         try:
             fn = e[n[0].value]
