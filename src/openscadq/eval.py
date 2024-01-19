@@ -50,7 +50,7 @@ class Function:
             warnings.warn(f"no value for {v !r}")
             p[v] = None
 
-        e = Env(name=self.name, parent=self.env, init=p, vars_dyn=_env.vars_dyn)
+        e = Env(name=self.name, parent=self.env, vars_dyn=_env.vars_dyn)
         for k,v in p.items():
             e[k] = v
 
