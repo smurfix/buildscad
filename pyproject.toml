@@ -1,0 +1,70 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [ "setuptools", "wheel", "setuptools-scm",]
+
+[project]
+classifiers = [
+	"Intended Audience :: Developers",
+	"Programming Language :: Python :: 3",
+	"Framework :: AsyncIO",
+	"Framework :: Trio",
+	"Framework :: AnyIO",
+	"License :: OSI Approved",
+	"Development Status :: 4 - Beta",
+	]
+dependencies = [
+	"cadquery",
+	"numpy-stl",
+	"<cqmore>@git+https://github.com/JustinSDK/cqMore",
+	]
+dynamic = [ "version",]
+keywords = [ "openscad", "cadquery"]
+requires-python = ">=3.10"
+name = "opensCadQ"
+description = "An interpreter for OpenSCAD that renders to CadQuery workplane"
+readme = "README.md"
+[[project.authors]]
+email = "matthias@urlichs.de"
+name = "Matthias Urlichs"
+
+[project.scripts]
+scad2cq = "openscadq.__main__:main"
+
+[project.license]
+file = "LICENSE.txt"
+
+[project.urls]
+homepage = "https://github.org/smurfix/openscadq"
+repository = "https://github.com/smurfix/openscadq.git"
+
+[tool.flake8]
+max-line-length = 99
+ignore = [ "F841", "F401", "E731", "E502", "E402", "E127", "E123", "W503", "E231", "E203",]
+
+[tool.isort]
+line_length = 99
+multi_line_output = 3
+profile = "black"
+
+[tool.setuptools]
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist = py310,check
+"""
+
+[tool.pylint]
+[tool.pylint.messages_control]
+disable = "wrong-import-order,ungrouped-imports,too-many-nested-blocks,use-dict-literal,unspecified-encoding,too-many-statements,too-many-return-statements,too-many-locals,too-many-instance-attributes,too-many-branches,too-many-arguments,too-few-public-methods,superfluous-parens,no-else-return,no-else-continue,invalid-name,fixme,cyclic-import"
+
+[tool.black]
+line-length = 99
+
