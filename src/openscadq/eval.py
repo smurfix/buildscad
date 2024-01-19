@@ -19,7 +19,8 @@ def arity(n,a,b=None):
         raise ArityError(n,a,b)
 
 class Function:
-    def __init__(self,name,params,body,env):
+    def __init__(self,eval,name,params,body,env):
+        self.eval = eval
         self.name = name
         self.params = params
         self.body = body
@@ -31,24 +32,35 @@ class Function:
 
         p.update(kw)
         off = 0
-        vl = self.params[0] + list(self.params[1].keys())
+        vl = list(self.params[0]) + list(self.params[1].keys())
         for v in a:
             p[vl[off]] = v
             off += 1
         for v in vl:
-            if v.startswith('$') and v in _env.vars:
-                p[v] = _env[v]
-            elif v not in p:
-                warnings.warn(f"no value for {v !r}")
-                p[v] = None
+            if v in p:
+                continue
+            elif v.startswith('$'):
+                # $-variables get to be dynamically scoped
+                try:
+                    p[v] = _env[v]
+                except KeyError:
+                    pass
+                else:
+                    continue
+            warnings.warn(f"no value for {v !r}")
+            p[v] = None
 
-        e = Eval(nodes=self.body, env=Env(name=self.name, parent=_env, init=p))
-        return e.eval()
+        e = Env(name=self.name, parent=self.env, init=p, vars_dyn=_env.vars_dyn)
+        for k,v in p.items():
+            e[k] = v
+
+        return self.eval.eval(node=self.body, env=e)
 
 class Module(Function):
     pass
 
 class Eval:
+    no_exec:bool = False
 
     def __init__(self, nodes, env:Env|None=None, debug:bool = False):
         self.nodes = nodes
@@ -329,7 +341,7 @@ class Eval:
         return eval(n.value)
 
     def _e_assignment(self, n, e):
-        self.env.vars[n[0].value] = self._eval(n[2], e)
+        e[n[0].value] = self._eval(n[2], e)
 
     def _e_stmt_decl_fn(self,n,e):
         arity(n,7,8)
@@ -339,7 +351,7 @@ class Eval:
         else:
             params = ((),{})
         body = n[-2]
-        e.vars[name] = Function(name,params,body,e)
+        e[name] = Function(self,name,params,body,e)
 
     def _e_stmt_decl_mod(self,n,e):
         arity(n,5,6)
@@ -349,13 +361,14 @@ class Eval:
         else:
             params = ((),{})
         body = n[-1]
-        e.vars[name] = Module(name,params,body,e)
+        e[name] = Module(self,name,params,body,e)
 
     def _e_fn_call(self,n,e):
         if self.debug:
             print(" "*self.level,"=",n)
 
         arity(n,3,4)
+        e.eval = self.eval
         try:
             fn = e[n[0].value]
         except AttributeError:
@@ -443,8 +456,22 @@ class Eval:
     def _e_EOF(self,n,e):
         return None
 
-    _e_statement = _e__descend
-    _e_child_statement = _e__descend
+    def _e_statement(self,n,e):
+        arity(n,1)
+        n = n[0]
+        if n.rule_name not in {"assignment", "stmt_decl_mod", "stmt_decl_fn"}:
+            if self.no_exec:
+                return
+        return self._eval(n, e)
+
+    def _e_child_statement(self,n,e):
+        # returns the tree, does not evaluate.
+        arity(n,1);
+#       if n[0].rule_name != "no_child":
+#           breakpoint()
+        return n[0]
+
+
     _e_primary = _e__descend
     _e_module_instantiation = _e__descend
     _e_vector_element = _e__descend
@@ -452,6 +479,12 @@ class Eval:
     _e_addon = _e__descend
 
 
-    def eval(self):
-        return self._eval(self.nodes,self.env)
+    def eval(self, node=None, no_exec=False, env=None):
+        if env is None:
+            env = self.env
+        try:
+            n_e,self.no_exec = self.no_exec,no_exec
+            return self._eval(node or self.nodes, env)
+        finally:
+            self.no_exec = n_e
 

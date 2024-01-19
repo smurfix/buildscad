@@ -13,35 +13,45 @@ class EnvCall:
         self.is_new = False
 
     def __call__(self, *a, **k):
-        return self.env.vars[self.fn](*a, _env=self.env, **k)
+        vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
+        return vars[self.fn](*a, _env=self.env, **k)
 
 class Env:
     current_call = None
+    eval = None
 
-    def __init__(self, parent:Env|Vars, name:str|None = None, init:dict|None=None):
+    def __init__(self, parent:Env|Vars, name:str|None = None, init:dict|None=None, vars_dyn:Vars=None):
         if isinstance(parent,Env):
             self.parent = parent
             self.vars = parent.vars.child(name, init=init)
+            self.vars_dyn = vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name)
         else:
             if init is not None:
                 raise ValueError("invalid")
             self.vars = parent
+            self.vars_dyn = vars_dyn if vars_dyn is not None else parent
             self.parent = parent
 
     def __getitem__(self, k):
         if k == "$children":
             return len(self.vars["_e_children"])
         try:
-            fn = self.vars[k]
+            fn = (self.vars_dyn if k[0] == "$" else self.vars)[k]
         except KeyError:
             return getattr(self,k)
         else:
-            if callable(fn):
+            if isinstance(fn, EnvCall):
+                pass
+            elif callable(fn):
                 fn = EnvCall(k, env=self)
             return fn
 
+    def __setitem__(self, k, v):
+        (self.vars_dyn if k[0] == "$" else self.vars)[k] = v
+
     def inject_vars(self, env):
         self.vars.inject(env.vars)
+        self.vars_dyn.inject(env.vars_dyn)
 
     def set_cc(self, k, v):
         if self.current_call is None:
@@ -132,19 +142,33 @@ class Env:
         return ch.translate(vec)
 
     def children(self, idx=None):
-        ch = self.vars["_e_children"]
-        if idx is None:
-            return ch
-        if isinstance(idx,int):
-            return ch[i]
+        ws = None
+        def iter_children():
+            ch = self.vars["_e_children"]
+            if idx is None:
+                yield from iter(ch)
+            elif isinstance(idx,int):
+                yield ch[i]
+            else:
+                raise NotImplementedError("Child vectors")
 
-        raise NotImplementedError("Child vectors")
+        for ch in iter_children():
+            r = self.eval(node=ch)
+            if r is None:
+                pass
+            elif isinstance(r,cq.Workplane):
+                if ws is None:
+                    ws = cq.Workplane("XY")
+                ws = ws.add(r)
+            else:
+                warnings.warn(f"Unknown result: {r !r}")
+        return ws
 
         
 class MainEnv(Env):
-    def __init__(self):
-        vars = Vars(name="_main")
-        super().__init__(parent=vars, name="_main")
+    def __init__(self, name="_main", vars_dyn=None):
+        vars = Vars(name=name)
+        super().__init__(parent=vars, name=name, vars_dyn=vars_dyn)
         self.vars['$fn'] = 999
         self.vars['$fa'] = 0
         self.vars['$fs'] = 0.001
