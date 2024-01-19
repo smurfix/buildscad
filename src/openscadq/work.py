@@ -88,7 +88,13 @@ class Env:
 
     def sphere(self, r=None, d=None):
         if r is None:
-            r = d/2
+            if d is None:
+                r = 1
+            else:
+                r = d/2
+        elif d is not None:
+            warnings.warn("sphere: parameters are ambiguous")
+
         return cq.Workplane("XY").sphere(r)
 
     def cube(self, size=1, center=False):
