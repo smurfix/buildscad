@@ -147,27 +147,74 @@ class Env:
             return None
         return ch.translate(v)
 
-    def children(self, idx=None):
-        ws = None
-        def iter_children():
-            ch = self.vars["_e_children"]
-            if idx is None:
-                yield from iter(ch)
-            elif isinstance(idx,int):
-                yield ch[i]
-            else:
-                raise NotImplementedError("Child vectors")
+    def rotate(self, a=None, v=None):
+        ch = self.children()
+        if ch is None:
+            return None
+        if v is not None:
+            return ch.rotate((0,0,0),v,a)
+        elif isinstance(a,(float,int)):
+            return ch.rotate((0,0,0),(0,0,1),a)
+        else:
+            if a[0]:
+                ch = ch.rotate((0,0,0),(1,0,0),a[0])
+            if a[1]:
+                ch = ch.rotate((0,0,0),(0,1,0),a[1])
+            if a[2]:
+                ch = ch.rotate((0,0,0),(0,0,1),a[2])
+            return ch
 
-        for ch in iter_children():
-            r = self.eval(node=ch)
-            if r is None:
-                pass
-            elif isinstance(r,cq.Workplane):
-                if ws is None:
-                    ws = cq.Workplane("XY")
-                ws = ws.add(r)
-            else:
-                warnings.warn(f"Unknown result: {r !r}")
+    def difference(self):
+        ch = self.children()
+        if ch is None:
+            return None
+        if len(ch.objects) == 1:
+            return ch
+
+        ws = cq.Workplane("XY")
+        ws.add(ch.objects[0])
+
+        for obj in ch.objects[1:]:
+            ws = ws.cut(obj, clean=False, tol=0.001)
+        return ws.clean()
+
+    def union(self):
+        ch = self.children()
+        if ch is None:
+            return None
+        if len(ch.objects) == 1:
+            return ch
+        return ch.combine(tol=0.001)
+
+    def intersection(self):
+        ch = self.children()
+        if ch is None:
+            return None
+        if len(ch) == 1:
+            return ch
+
+        ws = cq.Workplane("XY")
+        ws.add(ch.objects[0])
+
+        for obj in ch.objects[1:]:
+            ws = ws.intersect(obj, clean=False, tol=0.001)
+        return ws.clean()
+
+    def children(self, idx=None):
+        ch = self.vars["_e_children"]
+        cws = self.eval(node=ch)
+        if cws is None:
+            return None
+        if idx is None:
+            return cws
+
+        ws = cq.Workplane("XY")
+        if isinstance(idx,int):
+            ws.add(cws.objects[idx])
+        else:
+            # assume it's a slice
+            for obj in cws.objects[idx]:
+                ws.add(obj)
         return ws
 
         
