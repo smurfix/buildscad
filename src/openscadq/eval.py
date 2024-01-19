@@ -86,6 +86,9 @@ class Eval:
         return res
 
     def _e_Input(self, n, e):
+        return self._e__list(n,e)
+
+    def _e__list(self, n, e):
         ws = None
         for nn in n:
             r = self._eval(nn,e)
@@ -105,7 +108,10 @@ class Eval:
         return self._eval(n[0], e)
 
     def _e_stmt_list(self,n,e):
-        return self._e_Input(n[1:-1],e)
+        if self.no_exec:
+            raise RuntimeError("This shouldn't happen")
+        e = Env(parent=e)
+        return self._e__list(n[1:-1],e)
 
     def _e_pr_vec_empty(self,n,e):
         return ()
