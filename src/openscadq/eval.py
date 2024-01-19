@@ -330,7 +330,7 @@ class Eval:
         if off < len(n):
             with e.cc(res):
                 app = self._eval(n[off], e)
-                res = app(e.current_call)
+                res = app(e.current_call or res)
             off += 1
         while off < len(n):
             app = self._eval(n[off], e)
