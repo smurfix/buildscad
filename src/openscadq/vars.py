@@ -12,7 +12,10 @@ class Vars:
     """
 
     def __init__(
-        self, name: str | None = None, parent: Vars | None = None, init: dict | None = None,
+        self,
+        name: str | None = None,
+        parent: Vars | None = None,
+        init: dict | None = None,
     ):
         self._data = dict()
         self._p = parent
@@ -33,8 +36,8 @@ class Vars:
 
     def inject(self, np: Vars):
         """inject values in "np" into the current list"""
-        np = Vars(name=np._name, init=np._data)
-        np._p = self._p
+        np = Vars(name=np._name, init=np._data)  # noqa:SLF001
+        np._p = self._p  # noqa:SLF001
         self._p = np
 
     def __getitem__(self, k):

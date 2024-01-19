@@ -1,3 +1,6 @@
+"""
+Command-line interpreter for openscadq
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,6 +16,7 @@ from cadquery import exporters as exp
 @click.option("-o", "--outputput", "outfile", required=True, type=Path)
 @click.option("-d", "--debug", is_flag=True)
 def main(infile, outfile, debug):
+    "interpret OpenSCAD, emit STEP"
     res = process(infile, debug=debug)
     if res is None:
         print("No output.")

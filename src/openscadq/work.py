@@ -1,3 +1,10 @@
+"""
+This module contains the environment container for interpreting OpenSCAD
+functions and whatnot.
+
+The environment also contains all static functions defined for OpenSCAD,
+i.e. those that do the actual work, which is why this module is named "work".
+"""
 from __future__ import annotations
 
 import math
@@ -10,17 +17,21 @@ import cadquery as cq
 
 
 class EnvCall:
+    """Environment-specific function call."""
+
     def __init__(self, fn, env):
         self.fn = fn
         self.env = env
         self.is_new = False
 
-    def __call__(self, *a, **k):
+    def __call__(self, *a, **k):  # noqa:D102  # XXX
         vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
         return vars[self.fn](*a, _env=self.env, **k)
 
 
 class Env:
+    """Execution environment for interpreting OpenSCAD"""
+
     current_call = None
     eval = None
 
@@ -60,10 +71,12 @@ class Env:
         (self.vars_dyn if k[0] == "$" else self.vars)[k] = v
 
     def inject_vars(self, env):
+        """inject the result of "use" or "import" into the environment"""
         self.vars.inject(env.vars)
         self.vars_dyn.inject(env.vars_dyn)
 
     def set_cc(self, k, v):
+        "set variables for a possibly-wrapped call"
         if self.current_call is None:
             self.vars[k] = v
         else:
@@ -76,6 +89,7 @@ class Env:
 
     @contextmanager
     def cc(self, fn):
+        "Call wrapper"
         if isinstance(fn, EnvCall):
             self.current_call, cc = fn, self.current_call
             try:
@@ -88,10 +102,10 @@ class Env:
     PI = math.pi
     undef = None
 
-    def version(self):
+    def version(self):  # noqa:D102
         return "0.1.0"
 
-    def echo(self, *a, **k):
+    def echo(self, *a, **k):  # noqa:D102
         class DE:
             def __repr__(self):
                 return ", ".join(f"{k} = {v !r}" for k, v in k.items())
@@ -100,7 +114,7 @@ class Env:
             a = a + (DE(),)
         print("ECHO:", ", ".join(repr(x) for x in a))
 
-    def sphere(self, r=None, d=None):
+    def sphere(self, r=None, d=None):  # noqa:D102
         if r is None:
             if d is None:
                 r = 1
@@ -111,7 +125,7 @@ class Env:
 
         return cq.Workplane("XY").sphere(r)
 
-    def cube(self, size=1, center=False):
+    def cube(self, size=1, center=False):  # noqa:D102
         if isinstance(size, (int, float)):
             x, y, z = size, size, size
         else:
@@ -121,7 +135,7 @@ class Env:
             res = res.translate((x / 2, y / 2, z / 2))
         return res
 
-    def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None, d2=None, center=False):
+    def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None, d2=None, center=False):  # noqa:D102
         if (
             (
                 (r1 is not None)
@@ -160,13 +174,13 @@ class Env:
             res = res.translate([0, 0, -h / 2])
         return res
 
-    def translate(self, v):
+    def translate(self, v):  # noqa:D102
         ch = self.children()
         if ch is None:
             return None
         return ch.translate(v)
 
-    def rotate(self, a=None, v=None):
+    def rotate(self, a=None, v=None):  # noqa:D102
         ch = self.children()
         if ch is None:
             return None
@@ -183,7 +197,7 @@ class Env:
                 ch = ch.rotate((0, 0, 0), (0, 0, 1), a[2])
             return ch
 
-    def difference(self):
+    def difference(self):  # noqa:D102
         ch = self.children()
         if ch is None:
             return None
@@ -197,7 +211,7 @@ class Env:
             ws = ws.cut(obj, clean=False, tol=0.001)
         return ws.clean()
 
-    def union(self):
+    def union(self):  # noqa:D102
         ch = self.children()
         if ch is None:
             return None
@@ -205,7 +219,7 @@ class Env:
             return ch
         return ch.combine(tol=0.001)
 
-    def intersection(self):
+    def intersection(self):  # noqa:D102
         ch = self.children()
         if ch is None:
             return None
@@ -219,7 +233,7 @@ class Env:
             ws = ws.intersect(obj, clean=False, tol=0.001)
         return ws.clean()
 
-    def children(self, idx=None):
+    def children(self, idx=None):  # noqa:D102
         ch = self.vars["_e_children"]
         cws = self.eval(node=ch)
         if cws is None:
@@ -238,6 +252,8 @@ class Env:
 
 
 class MainEnv(Env):
+    "main environment with global variables"
+
     def __init__(self, name="_main", vars_dyn=None):
         vars = Vars(name=name)
         super().__init__(parent=vars, name=name, vars_dyn=vars_dyn)

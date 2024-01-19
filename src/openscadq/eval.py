@@ -1,3 +1,6 @@
+"""
+Evaluate a parsed OpenSCAD file.
+"""
 from __future__ import annotations
 
 import math
@@ -10,13 +13,17 @@ from .peg import Parser
 from .work import Env, MainEnv
 
 import cadquery as cq
+from simpleeval import simple_eval
+
+# ruff: noqa:ARG002
 
 
 class ArityError(ValueError):
-    pass
+    "Wrong number of arguments"
 
 
 def arity(n, a, b=None):
+    "Checker for parse tree processors"
     if b is None:
         if len(n) != a:
             raise ArityError(n, a)
@@ -25,6 +32,8 @@ def arity(n, a, b=None):
 
 
 class Function:
+    """Wrapper for function calls"""
+
     def __init__(self, eval, name, params, body, env):
         self.eval = eval
         self.name = name
@@ -33,6 +42,7 @@ class Function:
         self.env = env
 
     def __call__(self, *a, _env, **kw):
+        "function call; apply arguments and interpret the body"
         p = dict(**self.params[1])
 
         p.update(kw)
@@ -63,10 +73,14 @@ class Function:
 
 
 class Module(Function):
-    pass
+    """Wrapper for method calls"""
+
+    # incidentally same as for functions
 
 
 class Eval:
+    """Evaluator that steps through the parse tree and constructs the model from it"""
+
     defs: bool = None
 
     def __init__(self, nodes, env: Env | None = None, debug: bool = False):
@@ -90,7 +104,7 @@ class Eval:
 
         except AttributeError:
             if not n.rule_name:
-                breakpoint()
+                raise RuntimeError("trying to interpret a terminal element", n) from None
             print(f"Unknown: {n.rule_name}")
             print(n.tree_str())
             sys.exit(1)
@@ -359,7 +373,7 @@ class Eval:
         return e[n.value]
 
     def _e_pr_Str(self, n, e):
-        return eval(n.value)
+        return simple_eval(n.value)
 
     def _e_assignment(self, n, e):
         e[n[0].value] = self._eval(n[2], e)
@@ -532,7 +546,12 @@ class Eval:
     _e_expr = _e__descend
     _e_addon = _e__descend
 
-    def eval(self, node=None, env=None):
+    def eval(self, node=None, env: Env = None):
+        """Evaluates a (sub)tree.
+
+        @node: the tree to process
+        @env: the environment to use
+        """
         if env is None:
             env = self.env
         return self._eval(node or self.nodes, env)

@@ -1,4 +1,9 @@
-#######################################################################
+"""
+PEG parser
+
+This file specifies the Arpeggio parser which parses the "openscad.peg"
+grammar specification for OpenSCAD's syntax.
+"""
 # Name: openscadq/peg.py
 # Purpose: This module is a variation of the original peg.py.
 #   The syntax is slightly changed to be more readable.
@@ -92,6 +97,8 @@ def comment():
 
 
 class Parser(ParserPEGOrig):
+    "Parser for OpenSCAD grammar"
+
     def __init__(self, *args, debug=False, **kwargs):
         """
         Constructs parser from textual PEG definition.
@@ -112,7 +119,8 @@ class Parser(ParserPEGOrig):
         parse_tree = parser.parse(language_def)
 
         res = visit_parse_tree(
-            parse_tree, PEGVisitor(self.root_rule_name, self.comment_rule_name, self.ignore_case),
+            parse_tree,
+            PEGVisitor(self.root_rule_name, self.comment_rule_name, self.ignore_case),
         )
         self.debug = self.__debug
         return res
