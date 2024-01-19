@@ -60,7 +60,7 @@ class Module(Function):
     pass
 
 class Eval:
-    no_exec:bool = False
+    defs:bool = None
 
     def __init__(self, nodes, env:Env|None=None, debug:bool = False):
         self.nodes = nodes
@@ -103,6 +103,18 @@ class Eval:
         return self._e__list(n,e)
 
     def _e__list(self, n, e):
+        if self.defs:
+            self._e__list_(n,e)
+            return
+
+        try:
+            self.defs = True
+            self._e__list_(n,e)
+        finally:
+            self.defs = False
+        return self._e__list_(n,e)
+
+    def _e__list_(self, n, e):
         ws = None
         for nn in n:
             r = self._eval(nn,e)
@@ -137,17 +149,16 @@ class Eval:
         Add the variables and functions defined by the used module (but
         *not* and that it itself imports via 'use'!) to the current scope.
         """
+        if not self.defs:
+            return
+
         arity(n,2)
         p = Parser(debug=False, reduce_tree=False)
         fn = Path(n[1].value[1:-1])
         tree = p.parse(fn.read_text())
 
         ep = MainEnv(name=str(fn))
-        try:
-            self.no_exec = True
-            self._eval(tree, ep)
-        finally:
-            self.no_exec = False
+        self._eval(tree, ep)
         e.inject_vars(ep)
 
     def _e__descend(self, n, e):
@@ -155,7 +166,7 @@ class Eval:
         return self._eval(n[0], e)
 
     def _e_stmt_list(self,n,e):
-        if self.no_exec:
+        if self.defs:
             raise RuntimeError("This shouldn't happen")
         e = Env(parent=e)
         return self._e__list(n[1:-1],e)
@@ -460,7 +471,10 @@ class Eval:
         arity(n,1)
         n = n[0]
         if n.rule_name not in {"assignment", "stmt_decl_mod", "stmt_decl_fn"}:
-            if self.no_exec:
+            if self.defs:
+                return
+        else:
+            if not self.defs:
                 return
         return self._eval(n, e)
 
@@ -479,12 +493,8 @@ class Eval:
     _e_addon = _e__descend
 
 
-    def eval(self, node=None, no_exec=False, env=None):
+    def eval(self, node=None, env=None):
         if env is None:
             env = self.env
-        try:
-            n_e,self.no_exec = self.no_exec,no_exec
-            return self._eval(node or self.nodes, env)
-        finally:
-            self.no_exec = n_e
+        return self._eval(node or self.nodes, env)
 
