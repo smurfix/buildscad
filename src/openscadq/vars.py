@@ -5,9 +5,6 @@ from __future__ import annotations
 
 import warnings
 
-class NoData:
-    pass
-
 class Vars:
     """
     This is a quick-and-dirty hierarchical data storage.
@@ -46,14 +43,14 @@ class Vars:
             except KeyError:
                 pass
         else:
-            if res is not NoData:
-                return res
-        raise KeyError(k if self._name is None else (self._name,k)) from None
+            return res
+        raise KeyError(k, self._name) from None
 
     def __setitem__(self, k, v):
-        self._data[k] = v
+        if k in self._data:
+            warnings.warn(f"Dup assignment of {k !r}")
+        else:
+            self._data[k] = v
 
     def __delitem__(self, k):
-        self[k] = NoData
-
-
+        raise RuntimeError(f"Deletion of {k !r}")
