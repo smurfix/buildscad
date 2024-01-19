@@ -126,7 +126,10 @@ class Env:
         return res
 
     def translate(self, vec):
-        return self.children().translate(vec)
+        ch = self.children()
+        if ch is None:
+            return None
+        return ch.translate(vec)
 
     def children(self, idx=None):
         ch = self.vars["_e_children"]
