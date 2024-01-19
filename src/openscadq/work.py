@@ -50,7 +50,8 @@ class Env:
             cc = self.current_call
             if not cc.is_new:
                 cc.is_new = True
-                cc.env = Env(name=cc.fn, parent=cc.env)
+                env = Env(name=cc.fn, parent=cc.env)
+                self.current_call = cc = EnvCall(cc.fn, env)
             cc.env.vars[k] = v
 
     @contextmanager
