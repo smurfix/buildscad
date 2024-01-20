@@ -157,7 +157,7 @@ class Eval:
         """
         arity(n, 2)
         p = Parser(debug=False, reduce_tree=False)
-        fn = n[1].value[1:-1])
+        fn = n[1].value[1:-1]
         try:
             fn = e["_path"].parent / fn
         except AttributeError:
