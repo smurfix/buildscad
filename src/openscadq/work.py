@@ -255,13 +255,36 @@ class Env:
     def import_(self, name):
         fn = self["_path"].parent / name
         from stl.mesh import Mesh
-        from cqmore import Workplane
 
         vectors = Mesh.from_file(fn).vectors
         points = tuple(map(tuple, vectors.reshape((vectors.shape[0] * vectors.shape[1], 3))))
         faces = [(i, i + 1, i + 2) for i in range(0, len(points), 3)]
+        return self.polyhedron(points, faces)
+
+    def polyhedron(self, points, faces, convexity=None):
+        from cqmore import Workplane
         return Workplane().polyhedron(points, faces)
 
+    def linear_extrude(self, height, center=False, convexity=None, twist=0,
+            slices=0, scale=1):
+        if scale != 1:
+            raise ValueError("Scaling not yet supported")
+        ch = self.vars["_e_children"]
+        cws = self.eval(node=ch)
+        if cws is None:
+            return None
+        res = ch.twistExtrude(height, )
+        if center:
+            res = res.translate([0, 0, -height / 2])
+        return res
+
+    def rotate_extrude(self, angle=360, convexity=None):
+        ch = self.vars["_e_children"]
+        cws = self.eval(node=ch)
+        if cws is None:
+            return None
+
+        res = ch.revolve(angle, (0,0,0),(0,0,1), )
 
 class MainEnv(Env):
     "main environment with global variables"
