@@ -157,7 +157,11 @@ class Eval:
         """
         arity(n, 2)
         p = Parser(debug=False, reduce_tree=False)
-        fn = Path(n[1].value[1:-1])
+        fn = n[1].value[1:-1])
+        try:
+            fn = e["_path"].parent / fn
+        except AttributeError:
+            fn = Path(fn)
         tree = p.parse(fn.read_text())
         ep = Env(parent=e, name=str(fn))
         res = self._eval(tree, ep)
@@ -175,7 +179,12 @@ class Eval:
 
         arity(n, 2)
         p = Parser(debug=False, reduce_tree=False)
-        fn = Path(n[1].value[1:-1])
+        fn = n[1].value[1:-1]
+        try:
+            fn = e["_path"].parent / fn
+        except AttributeError:
+            fn = Path(fn)
+
         tree = p.parse(fn.read_text())
 
         ep = MainEnv(name=str(fn))
