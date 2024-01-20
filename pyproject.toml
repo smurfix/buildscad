@@ -6,14 +6,12 @@ requires = [ "setuptools", "wheel", "setuptools-scm",]
 classifiers = [
 	"Intended Audience :: Developers",
 	"Programming Language :: Python :: 3",
-	"Framework :: AsyncIO",
-	"Framework :: Trio",
-	"Framework :: AnyIO",
 	"License :: OSI Approved",
-	"Development Status :: 4 - Beta",
+	"Development Status :: 1 - Development",
 	]
 dependencies = [
 	"cadquery",
+	"click",
 	"numpy-stl",
 	"simple-eval",
 	"<cqmore>@git+https://github.com/JustinSDK/cqMore",

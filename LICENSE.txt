@@ -1,0 +1,9 @@
+All files in this repository are are licensed under the LGPL V3, as
+published by the FSF at https://www.gnu.org/licenses/lgpl-3.0.html .
+
+In addition to the LGPL's terms, the author(s) respectfully ask all users of
+this code to contribute any bug fixes or enhancements.
+
+Thank you.
+
+Copyright © 2024 Matthias Urlichs <matthias@urlichs.de>
