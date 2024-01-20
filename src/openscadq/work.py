@@ -279,16 +279,47 @@ class Env:
 
     def linear_extrude(self, height, center=False, convexity=None, twist=0,
             slices=0, scale=1):
+        if scale != 1 and twist != 0:
+            warnings.warn("Scaling+twisting not yet supported")
+            scale = 1
         if scale != 1:
-            raise ValueError("Scaling not yet supported")
+            warnings.warn("Scaling doesn't work yet")
+            scale = 1
         ch = self.vars["_e_children"]
         cws = self.eval(node=ch)
         if cws is None:
             return None
-        res = ch.twistExtrude(height, combine=False)
+        if twist:
+            res = cws.twistExtrude(height, -twist, combine=False)
+        elif scale == 1:
+            res = cws.extrude(height, combine=False)
+        else:
+            warnings.warn("Scaling doesn't work yet")
+            res = cws.workplane(offset=height)
+            res = res.loft(combine=False, clean=True)
+            res = None
         if center:
             res = res.translate([0, 0, -height / 2])
         return res
+
+    def scale(self, v):
+        if isinstance(v,(float,int)):
+            x,y,z = v,v,v
+        else:
+            x,y,z = v
+
+        ch = self.vars["_e_children"]
+        cws = self.eval(node=ch)
+        if cws is None:
+            return None
+        warnings.warn("Scaling doesn't work yet")
+        return cws
+
+        ws = cq.Workplane("XY")
+        m = cq.Matrix([[x,0,0,0],[0,y,0,0],[0,0,z,0]])
+        for obj in cws.objects:
+            ws = ws.add(obj.transformShape(m))
+        return ws
 
     def rotate_extrude(self, angle=360, convexity=None):
         ch = self.vars["_e_children"]
