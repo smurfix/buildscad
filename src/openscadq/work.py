@@ -265,6 +265,18 @@ class Env:
         from cqmore import Workplane
         return Workplane().polyhedron(points, faces)
 
+    def polygon(self, points, paths=None):
+        if paths is None:
+            p_ext = points
+            p_int = []
+        else:
+            p_ext = [points[x] for x in paths[0]]
+            p_int = [ [points[x] for x in xx] for xx in paths[1:] ]
+        ws = cq.Workplane("XY").polyline(p_ext).close()
+        for x in p_int:
+            ws = ws.polyline(x).close()
+        return ws
+
     def linear_extrude(self, height, center=False, convexity=None, twist=0,
             slices=0, scale=1):
         if scale != 1:
@@ -273,7 +285,7 @@ class Env:
         cws = self.eval(node=ch)
         if cws is None:
             return None
-        res = ch.twistExtrude(height, )
+        res = ch.twistExtrude(height, combine=False)
         if center:
             res = res.translate([0, 0, -height / 2])
         return res
@@ -284,7 +296,45 @@ class Env:
         if cws is None:
             return None
 
-        res = ch.revolve(angle, (0,0,0),(0,0,1), )
+        ws = cq.Workplane("XY")
+        for obj in cws.objects:
+            ws = ws.add(obj)  # SIGH
+        res = ws.toPending().revolve(abs(angle),(0,0,0),(0,1,0)).rotate((0, 0, 0), (1, 0, 0), 90)
+        if angle < 0:
+            res = res.rotate((0, 0, 0), (0, 0, 1), -angle)
+        return res
+
+
+    def color(self, c, a=None):
+        warnings.warn("Color is not yet supported")
+        ch = self.vars["_e_children"]
+        return self.eval(node=ch)
+
+    def square(self, size=1, center=False):
+        if isinstance(size,(int,float)):
+            x,y = size,size
+        else:
+            x,y = size
+
+        return cq.Workplane("XY").rect(x,y, centered=center)
+
+    def text(self, t, size=12, font=None, halign=None, valign=None,
+            spacing=1, direction="ltr", language=None, script=None):
+
+        args = {}
+        if font is not None:
+            args["font"] = font
+        if halign is not None:
+            args["halign"] = halign
+        if valign is not None:
+            args["valign"] = valign
+        if spacing != 1:
+            warnings.warn("Text spacing is not yet supported")
+        if direction != "ltr":
+            warnings.warn("Text direction is not yet supported")
+        res = cq.Workplane("XY").text(t, size, 1, cut=False, **args)
+        res = res.faces("<Z").wires().toPending()
+        return res
 
 class MainEnv(Env):
     "main environment with global variables"
