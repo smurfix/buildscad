@@ -21,8 +21,9 @@ def process(f: Path, debug: bool = False, **vars):
     p = Parser(debug=debug, reduce_tree=False)
     tree = p.parse(f.read_text())
     env = MainEnv()
+    vars.setdefault("_path", f)
     for k, v in vars.items():
-        env.set(k, v)
+        env[k] = v
 
     e = Eval(tree, env=env)
     result = e.eval()
