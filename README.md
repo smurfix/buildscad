@@ -65,6 +65,12 @@ However, the
 
 ## TODO
 
+To fix:
+* linear\_extrude with scaling
+* linear\_extrude with scaling and twist
+* polyhedron
+* use/include from a library (via envvar OPENSCADPATH)
+
 Implement a lot of functions.
 
 Improve error reporting.
