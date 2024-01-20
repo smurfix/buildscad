@@ -67,6 +67,8 @@ However, the
 
 Implement a lot of functions.
 
+Improve error reporting.
+
 Test working with 2D.
 
 An option to generate a cadquery script instead of the actual objects would
