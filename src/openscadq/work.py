@@ -45,7 +45,7 @@ class Env:
         if isinstance(parent, Env):
             self.parent = parent
             self.vars = parent.vars.child(name, init=init)
-            self.vars_dyn = vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name)
+            self.vars_dyn = vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name, init=init)
         else:
             if init is not None:
                 raise ValueError("invalid")
@@ -177,13 +177,13 @@ class Env:
         return res
 
     def translate(self, v):  # noqa:D102
-        ch = self.children()
+        ch = self._children()
         if ch is None:
             return None
         return ch.translate(v)
 
     def rotate(self, a=None, v=None):  # noqa:D102
-        ch = self.children()
+        ch = self._children()
         if ch is None:
             return None
         if v is not None:
@@ -200,7 +200,7 @@ class Env:
             return ch
 
     def difference(self):  # noqa:D102
-        ch = self.children()
+        ch = self._children()
         if ch is None:
             return None
         if len(ch.objects) == 1:
@@ -214,7 +214,7 @@ class Env:
         return ws.clean()
 
     def union(self):  # noqa:D102
-        ch = self.children()
+        ch = self._children()
         if ch is None:
             return None
         if len(ch.objects) == 1:
@@ -222,7 +222,7 @@ class Env:
         return ch.combine(tol=0.001)
 
     def intersection(self):  # noqa:D102
-        ch = self.children()
+        ch = self._children()
         if ch is None:
             return None
         if len(ch) == 1:
@@ -235,9 +235,10 @@ class Env:
             ws = ws.intersect(obj, clean=False, tol=0.001)
         return ws.clean()
 
-    def children(self, idx=None):  # noqa:D102
-        ch = self.vars["_e_children"]
-        cws = self.eval(node=ch)
+    def _children(self, idx=None, _ch=None):  # noqa:D102
+        if _ch is None:
+            _ch = self.vars["_e_children"]
+        cws = self.eval(node=_ch)
         if cws is None:
             return None
         if idx is None:
@@ -251,6 +252,15 @@ class Env:
             for obj in cws.objects[idx]:
                 ws.add(obj)
         return ws
+
+    def children(self, idx=None):  # noqa:D102
+        try:
+            ch = self.vars_dyn.prev.prev["_e_children"]
+            # We need to peel back two layers and access the dynamic stack.
+            # Our __init__ stores the variables to both
+        except KeyError:
+            return None
+        return self._children(idx,ch)
 
     def import_(self, name):
         fn = self["_path"].parent / name
@@ -276,6 +286,11 @@ class Env:
         for x in p_int:
             ws = ws.polyline(x).close()
         return ws
+
+    def debug(self):
+        ch = self.vars["_e_children"]
+        cws = self.eval(node=ch)
+        return cws
 
     def linear_extrude(self, height, center=False, convexity=None, twist=0,
             slices=0, scale=1):
@@ -349,7 +364,7 @@ class Env:
 
         return cq.Workplane("XY").rect(x,y, centered=center)
 
-    def text(self, t, size=12, font=None, halign=None, valign=None,
+    def text(self, t, size=10, font=None, halign="left", valign="baseline",
             spacing=1, direction="ltr", language=None, script=None):
 
         args = {}
@@ -366,6 +381,24 @@ class Env:
         res = cq.Workplane("XY").text(t, size, 1, cut=False, **args)
         res = res.faces("<Z").wires().toPending()
         return res
+
+    def str(self, *x):
+        return "".join(str(y) for y in x)
+
+    def chr(self, *x):
+        res = ""
+        for y in x:
+            if isinstance(y,int):
+                res += chr(y)
+            else:
+                res += "".join(chr(z) for z in y)
+        return res
+
+    def ord(self, x):
+        try:
+            return ord(x)
+        except ValueError:
+            return None
 
 class MainEnv(Env):
     "main environment with global variables"

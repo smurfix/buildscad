@@ -494,7 +494,8 @@ class Eval:
             return self._eval(n[0], e)
         arity(n, 2)
 
-        e = Env(parent=e, init=dict(_e_children=n[1]))
+        dd = { "_e_children": n[1] }
+        e = Env(parent=e, init=dd)
         return self._eval(n[0], e)
 
     def _e_no_child(self, n, e):

@@ -18,7 +18,7 @@ class Vars:
         init: dict | None = None,
     ):
         self._data = dict()
-        self._p = parent
+        self.prev = parent
         self._name = name
         if init:
             self._data.update(init)
@@ -37,16 +37,16 @@ class Vars:
     def inject(self, np: Vars):
         """inject values in "np" into the current list"""
         np = Vars(name=np._name, init=np._data)  # noqa:SLF001
-        np._p = self._p  # noqa:SLF001
-        self._p = np
+        np.prev = self.prev
+        self.prev = np
 
     def __getitem__(self, k):
         try:
             res = self._data[k]
         except KeyError:
             try:
-                if self._p is not None:
-                    return self._p[k]
+                if self.prev is not None:
+                    return self.prev[k]
             except KeyError:
                 pass
         else:
