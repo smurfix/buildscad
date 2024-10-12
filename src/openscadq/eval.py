@@ -172,7 +172,7 @@ class Eval:
         """'use' statement.
 
         Add the variables and functions defined by the used module (but
-        *not* and that it itself imports via 'use'!) to the current scope.
+        *not* those it itself imports via 'use'!) to the current scope.
         """
         if not self.defs:
             return
@@ -400,6 +400,9 @@ class Eval:
     def _e_stmt_decl_mod(self, n, e):
         arity(n, 5, 6)
         name = n[1].value
+        if name in e:
+            return  # already defined
+
         if len(n) == 6:
             params = self._eval(n[3], e)
         else:

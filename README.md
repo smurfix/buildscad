@@ -19,6 +19,16 @@ models algorithmically.
 This Python package interprets OpenSCAD code and builds a CadQuery
 workplane. The result can be used just like any other workplane.
 
+### Functional replacements
+
+If a module cannot be implemented in CadQuery, e.g. because it uses
+``hull``, often the most expedient fix is to write a replacement in Python.
+
+To use this feature, simply add a function with the desired name to the
+environment you pass to ``process``, or pre-load a Python file.
+
+In order to read global variables, functions may access the current
+environment via the contextvar ``openscadq.env``.
 
 ## Limitations
 

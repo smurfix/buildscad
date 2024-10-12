@@ -15,9 +15,10 @@ from cadquery import exporters as exp
 @click.option("-i", "--input", "infile", required=True, type=Path)
 @click.option("-o", "--outputput", "outfile", required=True, type=Path)
 @click.option("-d", "--debug", is_flag=True)
-def main(infile, outfile, debug):
+@click.option("-p", "--preload", type=click.Path(dir_okay=False,readable=True),multiple=True,help="")
+def main(infile, outfile, debug, preload):
     "interpret OpenSCAD, emit STEP"
-    res = process(infile, debug=debug)
+    res = process(infile, debug=debug, preload=preload)
     if res is None:
         print("No output.")
     else:

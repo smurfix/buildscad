@@ -26,7 +26,17 @@ class EnvCall:
 
     def __call__(self, *a, **k):  # noqa:D102  # XXX
         vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
-        return vars[self.fn](*a, _env=self.env, **k)
+        try:
+            return vars[self.fn](*a, _env=self.env, **k)
+        except TypeError:
+            try:
+                tok = env.set(self.env)
+                return vars[self.fn](*a, **k)
+            except TypeError as e:
+                raise e from None
+            finally:
+                if tok is not None:
+                    env.reset(tok)
 
 
 class Env:
@@ -71,6 +81,13 @@ class Env:
 
     def __setitem__(self, k, v):
         (self.vars_dyn if k[0] == "$" else self.vars)[k] = v
+
+    def set(self, k, v):
+        "__setitem__ without the dup warning"
+        (self.vars_dyn if k[0] == "$" else self.vars).set(k, v)
+
+    def __contains__(self, k):
+        return k in (self.vars_dyn if k[0] == "$" else self.vars)
 
     def inject_vars(self, env):
         """inject the result of "use" or "import" into the environment"""
