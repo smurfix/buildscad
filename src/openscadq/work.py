@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from .vars import Vars
 
 import cadquery as cq
+import math
 
 
 class EnvCall:
@@ -416,6 +417,33 @@ class Env:
             return ord(x)
         except ValueError:
             return None
+
+    def min(self,*x):
+        return min(*x)
+
+    def max(self,*x):
+        return max(*x)
+
+    def floor(self,x):
+        return math.floor(x)
+
+    def ceil(self,x):
+        return math.ceil(x)
+
+    def sin(self, x):
+        return math.sin(x*math.pi/180)
+
+    def cos(self, x):
+        return math.cos(x*math.pi/180)
+
+    def tan(self, x):
+        return math.tan(x*math.pi/180)
+
+    def atan(self, x):
+        return math.atan(x)*180/math.pi
+
+    def atan2(self, x, y):
+        return math.atan2(x, y)*180/math.pi
 
 class MainEnv(Env):
     "main environment with global variables"
