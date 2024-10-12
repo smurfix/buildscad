@@ -55,6 +55,19 @@ Implementing them is *way* out of scope for this project.
 
 ## Differences to OpenSCAD
 
+### Evaluation Order
+
+Unlike OpenSCAD, our parser does *not* delay evaluation of variables.
+
+In other words, this …
+
+::
+	bar = foo(123);
+	function foo(x) = x;
+
+… does not work and will complain about undefined code. Please re-arrange your code.
+
+
 ### Variable handling
 
 Unknown variables (i.e. those that are never assigned to) cause an error.
@@ -65,7 +78,7 @@ Unfilled parameters are still "undef", i.e.
 
 does emit "ECHO: undef".
 
-#### Value redefinition
+### Value redefinition
 
 OpenSCAD warns when redeclaring a variable: in effect, it re-orders
 statements, which can have undesired side effects.
