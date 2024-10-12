@@ -381,6 +381,9 @@ class Eval:
     def _e_pr_Sym(self, n, e):
         return e[n.value]
 
+    def _e_pr_paren(self, n, e):
+        return self._eval(n[1], e)
+
     def _e_pr_Str(self, n, e):
         return simple_eval(n.value)
 
@@ -409,6 +412,18 @@ class Eval:
             params = ((), {})
         body = n[-1]
         e[name] = Module(self, name, params, body, e)
+
+    def _e_lce_for(self,n,e):
+        raise ValueError("'for' in list comprehension is not implemented")
+
+    def _e_lce_for3(self,n,e):
+        raise ValueError("'for' in list comprehension is not implemented")
+
+    def _e_lce_let(self,n,e):
+        raise ValueError("'let' in list comprehension is not implemented")
+
+    def _e_lce_if(self,n,e):
+        raise ValueError("'if' in list comprehension is not implemented")
 
     def _e_pr_for2(self,n,e):
         return ForStep(n[1],n[3],1)
@@ -469,6 +484,23 @@ class Eval:
         a, k = self._eval(n[1], e)
         return lambda x: x(*a, **k)
 
+    def _e_add_index(self, n, e):
+        if len(n) == 2:
+            return lambda x: x()
+        arity(n, 3, 999)
+
+        i = 1
+        idx = []
+        while i < len(n):
+            a = self._eval(n[1], e)
+            i += 2
+            idx.append(a)
+        def ind(idx,x):
+            for i in idx:
+                x=x[i]
+            return x
+        return partial(ind,idx)
+
     def _e_parameters(self, n, e):
         arity(n, 1, 2)
         return self._eval(n[0], e)
@@ -526,7 +558,8 @@ class Eval:
 
     def _e_child_statement(self, n, e):
         arity(n, 1)
-        return self._eval(n[0], e)
+        # return self._eval(n[0], e)
+        return self._e_statement(n, e)
 
     def _e_pr_true(self, n, e):
         return True
@@ -558,6 +591,17 @@ class Eval:
 
     def _e_child_statements(self, n, e):
         return self._e__list(n, e)
+
+    def _e_ifelse_statement(self, n, e):
+        n = n[0]
+        arity(n, 5, 7)
+        res = self._eval(n[2], e)
+        if res:
+            return self._eval(n[4], e)
+        elif len(n) < 7:
+            return None
+        else:
+            return self._eval(n[6], e)
 
     _e_primary = _e__descend
     _e_module_instantiation = _e__descend

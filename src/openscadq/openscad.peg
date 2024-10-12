@@ -70,7 +70,7 @@ stmt_decl_fn = FUNCTION Symbol '(' parameters ')' '=' expr ';'
 
 assignment = Symbol '=' expr ';'
 
-module_instantiation = mod_inst_bang | mod_inst_hash | mod_inst_perc | mod_inst_star | mod_inst_child | ifelse_statement
+module_instantiation = ifelse_statement | mod_inst_bang | mod_inst_hash | mod_inst_perc | mod_inst_star | mod_inst_child
 mod_inst_bang = '!' module_instantiation
 mod_inst_hash = '#' module_instantiation
 mod_inst_perc = '%' module_instantiation
