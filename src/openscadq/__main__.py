@@ -12,8 +12,8 @@ from cadquery import exporters as exp
 
 
 @click.command
-@click.option("-i", "--input", "infile", required=True, type=Path)
-@click.option("-o", "--outputput", "outfile", required=True, type=Path)
+@click.option("-i", "--input", "infile", required=True, type=click.Path(dir_okay=False, readable=True, exists=True))
+@click.option("-o", "--output", "outfile", required=True, type=click.Path(dir_okay=False, writable=True, readable=False))
 @click.option("-d", "--debug", is_flag=True)
 @click.option("-p", "--preload", type=click.Path(dir_okay=False,readable=True),multiple=True,help="")
 def main(infile, outfile, debug, preload):
