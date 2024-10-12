@@ -8,11 +8,6 @@ from .peg import Parser
 from .work import MainEnv
 from pathlib import Path
 
-from typing import TYPE_CHECKING  # isort:skip
-
-if TYPE_CHECKING:
-    pass
-
 
 def process(f: Path, debug: bool = False, preload: list[str] = (), **vars):
     """process an OpenSCAD file
@@ -22,6 +17,9 @@ def process(f: Path, debug: bool = False, preload: list[str] = (), **vars):
     @preload refers to files that preload functions. They are intended to
     be modules or functions that need to be re-implemented, e.g. because
     they call ``hull`` or ``minkowski``.
+
+    Additional keyword arguments are used as environment variables.
+    A warning is printed if there's a conflict.
     """
     p = Parser(debug=debug, reduce_tree=False)
     tree = p.parse(Path(f).read_text())
