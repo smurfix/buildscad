@@ -10,7 +10,7 @@ from functools import partial
 from pathlib import Path
 
 from .peg import Parser
-from .work import Env, MainEnv
+from .work import Env, MainEnv, ForStep
 
 import cadquery as cq
 from simpleeval import simple_eval
@@ -409,6 +409,12 @@ class Eval:
             params = ((), {})
         body = n[-1]
         e[name] = Module(self, name, params, body, e)
+
+    def _e_pr_for2(self,n,e):
+        return ForStep(n[1],n[3],1)
+
+    def _e_pr_for3(self,n,e):
+        return ForStep(n[1],n[3],n[5])
 
     def _e_fn_call(self, n, e):
         if self.debug:

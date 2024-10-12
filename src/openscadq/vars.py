@@ -59,5 +59,9 @@ class Vars:
         else:
             self._data[k] = v
 
+    def set(self, k, v):
+        "__setitem__ but without the dup warning"
+        self._data[k] = v
+
     def __delitem__(self, k):
         raise RuntimeError(f"Deletion of {k !r}")

@@ -12,10 +12,17 @@ import warnings
 from contextlib import contextmanager
 
 from .vars import Vars
+from . import env
 
 import cadquery as cq
 import math
 
+
+class ForStep:
+    def __init__(self, start, end, step=1):
+        self.start = start
+        self.end = end
+        self.step = step
 
 class EnvCall:
     """Environment-specific function call."""
@@ -72,7 +79,15 @@ class Env:
         except KeyError:
             if k == "import":
                 k = "import_"
-            return getattr(self, k)
+            try:
+                try:
+                    return getattr(self, k)
+                except AttributeError:
+                    if k[-1] == "_" or k[0] == "_":
+                        raise
+                    return getattr(self, k+"_")
+            except AttributeError:
+                raise KeyError(k) from None
         else:
             if isinstance(fn, EnvCall):
                 pass
@@ -154,6 +169,44 @@ class Env:
         if not center:
             res = res.translate((x / 2, y / 2, z / 2))
         return res
+
+    def eval(self, node, env=None):
+        if env is None:
+            env = self
+        ev = Eval(node, env=env)
+        return ev.eval()
+
+    def for_(self, **var):
+        from .eval import Eval
+
+        if len(var) != 1:
+            if len(var):
+                raise ValueError("'for' called without variables")
+            else:
+                raise ValueError(f"'for' called with more than one variable ({','.join(var.keys())})")
+        var,stepper = next(iter(var.items()))
+
+        ws = cq.Workplane("XY")
+        e = Env(self)
+        ch = self.vars["_e_children"]
+
+        for val in stepper if isinstance(stepper,(list,tuple)) else range(self.eval(node=stepper.start), self.eval(node=stepper.end), stepper.step if isinstance(stepper.step,(int,float)) else self.eval(node=stepper.step)):
+            e.set(var, val)
+
+            cws = self.eval(node=ch, env=e)
+
+            if cws is None:
+                continue
+
+            # XXX 
+            if hasattr(cws,"wrapped"):
+                ws = ws.add(cws)
+            else:
+                for obj in cws.objects:
+                    ws = ws.add(obj)
+        if not ws.objects:
+            return None
+        return ws
 
     def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None, d2=None, center=False):  # noqa:D102
         if (
