@@ -257,7 +257,7 @@ class Env:
         ch = self._children()
         if ch is None:
             return None
-        if v is not None:
+        if v is not None and v != [0,0,0]:
             return ch.rotate((0, 0, 0), v, a)
         elif isinstance(a, (float, int)):
             return ch.rotate((0, 0, 0), (0, 0, 1), a)
