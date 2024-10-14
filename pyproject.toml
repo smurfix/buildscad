@@ -10,17 +10,17 @@ classifiers = [
 	"Development Status :: 1 - Development",
 	]
 dependencies = [
-	"cadquery",
+	"build123d",
 	"click",
 	"numpy-stl",
 	"simple-eval",
 	"<cqmore>@git+https://github.com/JustinSDK/cqMore",
 	]
 dynamic = [ "version",]
-keywords = [ "openscad", "cadquery"]
+keywords = [ "openscad", "cadquery", "build123d"]
 requires-python = ">=3.10"
 name = "opensCadQ"
-description = "An interpreter for OpenSCAD that renders to CadQuery workplane"
+description = "An interpreter for OpenSCAD that renders to Build123d objects"
 readme = "README.md"
 [[project.authors]]
 email = "matthias@urlichs.de"

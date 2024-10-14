@@ -9,10 +9,10 @@ from .work import MainEnv
 from pathlib import Path
 
 
-def process(f: Path, debug: bool = False, preload: list[str] = (), **vars):
+def process(f: Path|str, debug: bool = False, preload: list[str] = (), **vars):
     """process an OpenSCAD file
 
-    Returns a CadQuery workplane with the result.
+    Returns a build123d object with the result.
 
     @preload refers to files that preload functions. They are intended to
     be modules or functions that need to be re-implemented, e.g. because
@@ -22,7 +22,7 @@ def process(f: Path, debug: bool = False, preload: list[str] = (), **vars):
     A warning is printed if there's a conflict.
     """
     p = Parser(debug=debug, reduce_tree=False)
-    tree = p.parse(Path(f).read_text())
+    tree = p.parse((f if isinstance(f,str) and "\n" in f else Path(f).read_text()))
     env = MainEnv()
     d = {'env': env}
 

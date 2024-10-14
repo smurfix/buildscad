@@ -12,7 +12,6 @@ from pathlib import Path
 from .peg import Parser
 from .work import Env, MainEnv, ForStep
 
-import cadquery as cq
 from simpleeval import simple_eval
 
 # ruff: noqa:ARG002
@@ -136,18 +135,30 @@ class Eval:
         return self._e__list_(n, e)
 
     def _e__list_(self, n, e):
-        ws = None
+        if not self.defs and "$list$" in e:
+            del e["$list$"]
+            if len(n) == 1 and n[0].rule_name == "child_statements":
+                n = n[0]
+
+            res = []
+            for nn in n:
+                r = self._eval(nn, e)
+                if r is None:
+                    pass
+                else:
+                    res.append(r)
+            return res
+
+        res = None
         for nn in n:
             r = self._eval(nn, e)
             if r is None:
                 pass
-            elif isinstance(r, cq.Workplane):
-                if ws is None:
-                    ws = cq.Workplane("XY")
-                ws = ws.add(r)
+            elif res is not None:
+                res += r
             else:
-                warnings.warn(f"Unknown result: {r !r}")
-        return ws
+                res = r
+        return res
 
     def _e_Include(self, n, e):
         """'include' statement.

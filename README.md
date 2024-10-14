@@ -1,6 +1,6 @@
 # OpensCadQ
 
-An interpreter for OpenSCAD that emits CadQuery workplanes.
+An interpreter for OpenSCAD that emits build123d objects.
 
 ## Rationale
 
@@ -16,13 +16,14 @@ models algorithmically.
 
 ## Approach
 
-This Python package interprets OpenSCAD code and builds a CadQuery
-workplane. The result can be used just like any other workplane.
+This Python package interprets OpenSCAD code and builds a build123d
+object. The result can be used just like any other 3d object.
 
 ### Functional replacements
 
-If a module cannot be implemented in CadQuery, e.g. because it uses
-``hull``, often the most expedient fix is to write a replacement in Python.
+If a module cannot be implemented in build123d/OCC, most likely because it
+uses ``hull``, often the most expedient fix is to write a replacement in
+Python.
 
 To use this feature, simply add a function with the desired name to the
 environment you pass to ``process``, or pre-load a Python file.
@@ -47,7 +48,7 @@ Corollary: Don't even think of creating a six-sided polygon by using
 Speed could probably be improved; on the other hand, let's face it,
 OpenSCAD's mesh rendering can be slow as molasses too.
 
-The ``minkowski`` and ``hull`` operators don't exist in cadquery.
+The ``minkowski`` and ``hull`` operators don't exist in build123d.
 Implementing them is *way* out of scope for this project.
 
 ``undef`` is evaluated as ``None``.
@@ -81,7 +82,7 @@ does emit "ECHO: undef".
 ### Value redefinition
 
 OpenSCAD warns when redeclaring a variable: in effect, it re-orders
-statements, which can have undesired side effects.
+statements, which can have interesting side effects.
 
 By contrast, in opensCadQ updating a variable will emit a warning but not
 change the value.
@@ -105,5 +106,5 @@ Improve error reporting.
 
 Test working with 2D.
 
-An option to generate a cadquery script instead of the actual objects would
+An option to generate a build123d script instead of the actual objects would
 be nice.

@@ -8,7 +8,7 @@ from pathlib import Path
 from .main import process
 
 import click
-from cadquery import exporters as exp
+from build123d import export_step as exp
 
 
 @click.command
@@ -22,7 +22,7 @@ def main(infile, outfile, debug, preload):
     if res is None:
         print("No output.")
     else:
-        exp.export(res, str(outfile))
+        exp(res, str(outfile))
 
 
 if __name__ == "__main__":

@@ -24,7 +24,11 @@ class Vars:
             self._data.update(init)
 
     def __contains__(self, k):
-        return k in self._data
+        if k in self._data:
+            return True
+        if self.prev is None:
+            return False
+        return k in self.prev
 
     def set(self, k, v):
         """force set a value even if otherwise immutable"""
@@ -64,4 +68,10 @@ class Vars:
         self._data[k] = v
 
     def __delitem__(self, k):
-        raise RuntimeError(f"Deletion of {k !r}")
+        try:
+            del self._data[k]
+        except KeyError:
+            if self.prev is None:
+                raise
+            del self.prev[k]
+

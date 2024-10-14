@@ -14,7 +14,10 @@ from contextlib import contextmanager
 from .vars import Vars
 from . import env
 
-import cadquery as cq
+from build123d import Align,Pos,Rot,Axis,Plane
+from build123d import Solid,Shell,Face,Edge,Wire,Vector,Line
+from build123d import Rectangle,Circle,Box,Cylinder,Sphere,Polygon,Polyline,Text
+from build123d import loft,extrude,scale,revolve,make_face
 import math
 
 
@@ -98,6 +101,11 @@ class Env:
     def __setitem__(self, k, v):
         (self.vars_dyn if k[0] == "$" else self.vars)[k] = v
 
+    def __delitem__(self, k):
+        if k[0] != "$" or k[-1] != "$":
+            raise ValueError("Don't even try to delete variables")
+        del self.vars_dyn[k]
+
     def set(self, k, v):
         "__setitem__ without the dup warning"
         (self.vars_dyn if k[0] == "$" else self.vars).set(k, v)
@@ -158,16 +166,16 @@ class Env:
         elif d is not None:
             warnings.warn("sphere: parameters are ambiguous")
 
-        return cq.Workplane("XY").sphere(r)
+        return Sphere(r)
 
     def cube(self, size=1, center=False):  # noqa:D102
         if isinstance(size, (int, float)):
             x, y, z = size, size, size
         else:
             x, y, z = size
-        res = cq.Workplane("XY").box(x, y, z)
+        res = Box(x, y, z)
         if not center:
-            res = res.translate((x / 2, y / 2, z / 2))
+            res = Pos(x / 2, y / 2, z / 2) * res
         return res
 
     def eval(self, node, env=None):
@@ -176,7 +184,7 @@ class Env:
         ev = Eval(node, env=env)
         return ev.eval()
 
-    def for_(self, **var):
+    def for_(self, _intersect=False, **var):
         from .eval import Eval
 
         if len(var) != 1:
@@ -186,27 +194,29 @@ class Env:
                 raise ValueError(f"'for' called with more than one variable ({','.join(var.keys())})")
         var,stepper = next(iter(var.items()))
 
-        ws = cq.Workplane("XY")
+        res = None
         e = Env(self)
         ch = self.vars["_e_children"]
 
         for val in stepper if isinstance(stepper,(list,tuple)) else range(self.eval(node=stepper.start), self.eval(node=stepper.end), stepper.step if isinstance(stepper.step,(int,float)) else self.eval(node=stepper.step)):
             e.set(var, val)
 
-            cws = self.eval(node=ch, env=e)
+            r = self.eval(node=ch, env=e)
 
-            if cws is None:
+            if r is None:
                 continue
 
-            # XXX 
-            if hasattr(cws,"wrapped"):
-                ws = ws.add(cws)
+            elif res is None:
+                res = r
+            elif _intersect:
+                res &= r
             else:
-                for obj in cws.objects:
-                    ws = ws.add(obj)
-        if not ws.objects:
-            return None
-        return ws
+                res += r
+
+        return res
+
+    def intersection_for_(self, **var):
+        return self.for_(_intersect=True, **var)
 
     def cylinder(self, h=1, r1=None, r2=None, r=None, d=None, d1=None, d2=None, center=False):  # noqa:D102
         if (
@@ -236,15 +246,15 @@ class Env:
         if r1 is None:
             r1 = 1
         if r2 is None:
-            r2 = 1
+            r2 = r1
 
-        res = cq.Workplane("XY").circle(r1)
+        res = Circle(r1)
         if r1 == r2:
-            res = res.extrude(h)
+            res = extrude(res, h)
         else:
-            res = res.workplane(offset=h).circle(r2).loft(combine=True)
+            res = loft((res, Pos(0,0,h) * Circle(r2)))
         if center:
-            res = res.translate([0, 0, -h / 2])
+            res = Pos(0, 0, -h / 2) * res
         return res
 
     def translate(self, v):  # noqa:D102
@@ -263,66 +273,73 @@ class Env:
             return ch.rotate((0, 0, 0), (0, 0, 1), a)
         else:
             if a[0]:
-                ch = ch.rotate((0, 0, 0), (1, 0, 0), a[0])
+                ch = ch.rotate(Axis.X, a[0])
             if a[1]:
-                ch = ch.rotate((0, 0, 0), (0, 1, 0), a[1])
+                ch = ch.rotate(Axis.Y, a[1])
             if a[2]:
-                ch = ch.rotate((0, 0, 0), (0, 0, 1), a[2])
+                ch = ch.rotate(Axis.Z, a[2])
             return ch
 
     def difference(self):  # noqa:D102
-        ch = self._children()
-        if ch is None:
-            return None
-        if len(ch.objects) == 1:
-            return ch
+        ch = self._children(as_list=True)
 
-        ws = cq.Workplane("XY")
-        ws.add(ch.objects[0])
-
-        for obj in ch.objects[1:]:
-            ws = ws.cut(obj, clean=False, tol=0.001)
-        return ws.clean()
-
-    def union(self):  # noqa:D102
-        ch = self._children()
-        if ch is None:
-            return None
-        if len(ch.objects) == 1:
-            return ch
-        return ch.combine(tol=0.001)
-
-    def intersection(self):  # noqa:D102
-        ch = self._children()
-        if ch is None:
+        print(ch)
+        if not ch:
             return None
         if len(ch) == 1:
             return ch
 
-        ws = cq.Workplane("XY")
-        ws.add(ch.objects[0])
+        res = ch[0]
+        if res is None:
+            return None
 
-        for obj in ch.objects[1:]:
-            ws = ws.intersect(obj, clean=False, tol=0.001)
-        return ws.clean()
+        ct = []
+        for obj in ch[1:]:
+            if obj is None:
+                continue
+            ct.append(obj)
+        if not ct:
+            return res
+        return res.cut(*ct).clean()
 
-    def _children(self, idx=None, _ch=None):  # noqa:D102
+    def union(self):  # noqa:D102
+        return self._children()
+
+    def intersection(self):  # noqa:D102
+        ch = self._children(as_list=True)
+        if ch is None:
+            return None
+        res = None
+        for obj in ch:
+            if obj is None:
+                continue
+            if res is None:
+                res = obj
+            else:
+                res &= obj
+        return res.clean()
+
+    def _children(self, idx=None, _ch=None, as_list=False):  # noqa:D102
         if _ch is None:
             _ch = self.vars["_e_children"]
-        cws = self.eval(node=_ch)
-        if cws is None:
+        if idx is not None:
+            as_list = True
+
+        if as_list:
+            self.vars_dyn["$list$"] = True
+            try:
+                res = self.eval(node=_ch)
+            finally:
+                if "$list$" in self.vars_dyn:
+                    del self.vars_dyn["$list$"]
+        else:
+            res = self.eval(node=_ch)
+
+        if res is None:
             return None
         if idx is None:
-            return cws
-
-        ws = cq.Workplane("XY")
-        if isinstance(idx, int):
-            ws.add(cws.objects[idx])
-        else:
-            # assume it's a slice
-            for obj in cws.objects[idx]:
-                ws.add(obj)
-        return ws
+            return res
+        return res[idx]
 
     def children(self, idx=None):  # noqa:D102
         try:
@@ -343,25 +360,43 @@ class Env:
         return self.polyhedron(points, faces)
 
     def polyhedron(self, points, faces, convexity=None):
-        from cqmore import Workplane
-        return Workplane().polyhedron(points, faces)
+        from typing import Iterable, cast
+        points = [ tuple(x) for x in points ]
+
+        def PL(path):
+            return Polyline(*((points[x]) for x in path), close=True)
+
+        
+        return Solid.make_solid(
+            Shell.make_shell(
+                Face.make_from_wires(
+                    PL(face)
+                )
+                for face in faces
+            )
+        )
 
     def polygon(self, points, paths=None):
         if paths is None:
-            p_ext = points
+            p_ext = [ tuple(x) for x in points ]
             p_int = []
         else:
-            p_ext = [points[x] for x in paths[0]]
-            p_int = [ [points[x] for x in xx] for xx in paths[1:] ]
-        ws = cq.Workplane("XY").polyline(p_ext).close()
+            p_ext = [ tuple(points[x]) for x in paths[0]]
+            p_int = [ [tuple(points[x]) for x in xx] for xx in paths[1:] ]
+        print(p_ext,p_int)
+        def PL(pts):
+            res = Polyline(pts, close=True)
+            return make_face(res,Plane.XY)
+
+        res = PL(p_ext)
         for x in p_int:
-            ws = ws.polyline(x).close()
-        return ws
+            res -= PL(x)
+        return res
 
     def debug(self):
         ch = self.vars["_e_children"]
-        cws = self.eval(node=ch)
-        return cws
+        res = self.eval(node=ch)
+        return res
 
     def linear_extrude(self, height, center=False, convexity=None, twist=0,
             slices=0, scale=1):
@@ -372,20 +407,18 @@ class Env:
             warnings.warn("Scaling doesn't work yet")
             scale = 1
         ch = self.vars["_e_children"]
-        cws = self.eval(node=ch)
-        if cws is None:
+        res = self.eval(node=ch)
+        if res is None:
             return None
-        if twist:
-            res = cws.twistExtrude(height, -twist, combine=False)
-        elif scale == 1:
-            res = cws.extrude(height, combine=False)
+        if scale == 1 and twist == 0:
+            res = extrude(res, amount=height)
         else:
-            warnings.warn("Scaling doesn't work yet")
-            res = cws.workplane(offset=height)
-            res = res.loft(combine=False, clean=True)
-            res = None
+            res = loft((res, Pos(0,0,height) * Rot(0,0,-twist) * res.scale(scale)))
+#       else:
+#           warnings.warn("Scaling / twisting linear extrusions doesn't work yet")
+#           res = None
         if center:
-            res = res.translate([0, 0, -height / 2])
+            res = Pos(0, 0, -height / 2) * res
         return res
 
     def scale(self, v):
@@ -395,30 +428,21 @@ class Env:
             x,y,z = v
 
         ch = self.vars["_e_children"]
-        cws = self.eval(node=ch)
-        if cws is None:
+        res = self.eval(node=ch)
+        if res is None:
             return None
-        warnings.warn("Scaling doesn't work yet")
-        return cws
-
-        ws = cq.Workplane("XY")
-        m = cq.Matrix([[x,0,0,0],[0,y,0,0],[0,0,z,0]])
-        for obj in cws.objects:
-            ws = ws.add(obj.transformShape(m))
-        return ws
+        return scale(res, (x,y,z))
 
     def rotate_extrude(self, angle=360, convexity=None):
         ch = self.vars["_e_children"]
-        cws = self.eval(node=ch)
-        if cws is None:
+        res = self.eval(node=ch)
+        if res is None:
             return None
 
-        ws = cq.Workplane("XY")
-        for obj in cws.objects:
-            ws = ws.add(obj)  # SIGH
-        res = ws.toPending().revolve(abs(angle),(0,0,0),(0,1,0)).rotate((0, 0, 0), (1, 0, 0), 90)
+        res = revolve(res, Axis.Y, revolution_arc=abs(angle))
+        res = res.rotate(Axis.X,90)
         if angle < 0:
-            res = res.rotate((0, 0, 0), (0, 0, 1), -angle)
+            res = res.rotate(Axis.Z, angle)
         return res
 
 
@@ -433,24 +457,45 @@ class Env:
         else:
             x,y = size
 
-        return cq.Workplane("XY").rect(x,y, centered=center)
+        return Rectangle(x,y, align=(Align.CENTER,Align.CENTER) if center else (Align.MIN,Align.MIN))
+
+    def circle(self, r=None, d=None):
+        if r is None:
+            if d is None:
+                r = 1
+            else:
+                r = d / 2
+        elif d is not None:
+            warnings.warn("circle: parameters are ambiguous")
+
+        return Circle(r)
 
     def text(self, t, size=10, font=None, halign="left", valign="baseline",
-            spacing=1, direction="ltr", language=None, script=None):
+             spacing=1, direction="ltr", language=None, script=None):
 
-        args = {}
+        def _align(x):
+            if x is None or x == "baseline":
+                return None # Align.NONE
+            if x in ("left","top"):
+                return Align.MIN
+            if x in ("right","bottom"):
+                return Align.MAX
+            if x == "center":
+                return Align.CENTER
+
+            warnings.warn(f"What alignment is {x!r}?")
+            return Align.NONE
+
+        args = { 'align': (_align(halign), _align(valign)) }
         if font is not None:
             args["font"] = font
-        if halign is not None:
-            args["halign"] = halign
-        if valign is not None:
-            args["valign"] = valign
+        if direction != "ltr":
+            warnings.warn("Explicit text direction is not supported")
+        size *= 1.4  # XXX measured delta between openscad and build123d
+        res = Text(t, font_size=size, **args)
         if spacing != 1:
             warnings.warn("Text spacing is not yet supported")
-        if direction != "ltr":
-            warnings.warn("Text direction is not yet supported")
-        res = cq.Workplane("XY").text(t, size, 1, cut=False, **args)
-        res = res.faces("<Z").wires().toPending()
+            # TODO maybe stretch it instead?
         return res
 
     def str(self, *x):
