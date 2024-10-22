@@ -74,4 +74,3 @@ class Vars:
             if self.prev is None:
                 raise
             del self.prev[k]
-

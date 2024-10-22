@@ -62,7 +62,8 @@ OR = "||"
 
 Input = ( Include | Use | statement )* EOF
 
-statement = stmt_empty | stmt_list | module_instantiation | assignment | stmt_decl_mod | stmt_decl_fn 
+statement = stmt_empty | stmt_obj | assignment | stmt_decl_mod | stmt_decl_fn 
+stmt_obj = stmt_list | module_instantiation 
 stmt_empty = ";"
 stmt_list = '{' statement* '}'
 stmt_decl_mod = MODULE Symbol '(' parameters ')' statement

@@ -3,16 +3,22 @@ Evaluate a parsed OpenSCAD file.
 """
 from __future__ import annotations
 
+import logging
 import math
 import sys
 import warnings
 from functools import partial
 from pathlib import Path
 
+from . import env
 from .peg import Parser
-from .work import Env, MainEnv, ForStep
+from .work import Env, ForStep, MainEnv
 
+from arpeggio import ParseTreeNode as Node
+from build123d.topology import Compound
 from simpleeval import simple_eval
+
+logger = logging.getLogger(__name__)
 
 # ruff: noqa:ARG002
 
@@ -30,19 +36,24 @@ def arity(n, a, b=None):
         raise ArityError(n, a, b)
 
 
+def _skip1(fn):
+    fn.skip1 = True
+    return fn
+
+
 class Function:
     """Wrapper for function calls"""
 
-    def __init__(self, eval, name, params, body, env):
-        self.eval = eval
+    def __init__(self, evl: Eval, name: str, params: Node, body: Node):
+        self.evl = evl
         self.name = name
         self.params = params
         self.body = body
-        self.env = env
 
-    def __call__(self, *a, _env, **kw):
+    def _collect(self, *a, **kw):
         "function call; apply arguments and interpret the body"
         p = dict(**self.params[1])
+        _env = env.get()
 
         p.update(kw)
         off = 0
@@ -64,26 +75,80 @@ class Function:
             warnings.warn(f"no value for {v !r}")
             p[v] = None
 
-        e = Env(name=self.name, parent=self.env, vars_dyn=_env.vars_dyn)
+        e = Env(name=self.name, parent=self.evl.env, vars_dyn=_env.vars_dyn)
         for k, v in p.items():
             e[k] = v
+        return e
 
-        return self.eval.eval(node=self.body, env=e)
+    def __call__(self, *a, **kw):
+        e = self._collect(*a, **kw)
+        return Eval(e).eval(self.body)
 
 
 class Module(Function):
     """Wrapper for method calls"""
 
-    # incidentally same as for functions
+    def __call__(self, *a, **kw):
+        e = self._collect(*a, **kw)
+        ee = Eval(e)
+        ee._children = e["_e_children"] = []
+        ee.eval(self.body)
+        return ee.union()
+
+
+class Shape:
+    """Stores a statement, presumably one whole evaluation results in a
+    shape.
+    """
+
+    def __init__(self, evl: Eval, n: Node):
+        self.evl = evl
+        self.n = n
+
+    def __call__(self):
+        return self.evl.eval(self.n)
+
+
+class EvalVar:
+    """Holds the expression for a variable.
+
+    On first call, replaces the var with its evaluation.
+    This way we have (a) delayed evaluation and (b) don't
+    need to enforce ordering on our OpenSCAD input.
+    """
+
+    def __init__(self, evl: Eval, name: str, n: Node):
+        self.evl = evl
+        self.name = name
+        self.n = n
+        self.working = False
+
+    def __call__(self):
+        if self.working:
+            raise ValueError(f"Recursive value for {self.name}")
+        self.working = True
+        try:
+            val = self.evl.eval(self.n)
+        finally:
+            self.working = False
+        self.evl.env.set(self.name, val)
+        return val
 
 
 class Eval:
-    """Evaluator that steps through the parse tree and constructs the model from it"""
+    """An Evaluator that steps through a block's parse tree and, well,
+    evaluates it. This is a two-phase process.
 
-    defs: bool = None
+    The first phase processes include statements and collects (but does
+    not evaluate) variable assignments, function and module declarations,
+    and statements that might actually render something. It is started by
+    the top-level ``Input`` node, or in the body of a child statement.
 
-    def __init__(self, nodes, env: Env | None = None, debug: bool = False):
-        self.nodes = nodes
+    The second phase traverses the render statements, evaluates them, and
+    returns an object (or, if required, a list of objects).
+    """
+
+    def __init__(self, env: Env | None = None, debug: bool = False):
         if env is None:
             env = MainEnv()
         self.env = env
@@ -94,184 +159,200 @@ class Eval:
         """(forcibly) set a value"""
         self.env.vars.set(k, v)
 
-    def _eval(self, n, e):
-        try:
-            p = getattr(self, f"_e_{n.rule_name}")
-            self.level += 1
-            if self.debug:
-                print(" " * self.level, ">", n.rule_name)
+    def eval(self, n):
+        while True:
+            try:
+                p = getattr(self, f"_e_{n.rule_name}")
+                if self.debug:
+                    print(" " * self.level, ">", n.rule_name)
 
-        except AttributeError:
-            if not n.rule_name:
-                raise RuntimeError("trying to interpret a terminal element", n) from None
-            print(f"Unknown: {n.rule_name}")
-            print(n.tree_str())
-            sys.exit(1)
+            except AttributeError:
+                if not n.rule_name:
+                    raise RuntimeError("trying to interpret a terminal element", n) from None
+                print(n.tree_str(), file=sys.stderr)
+                raise RuntimeError(f"Syntax not implemented: {n.rule_name}")
+
+            else:
+                try:
+                    if len(n) == 1 and hasattr(p, "skip1"):
+                        n = n[0]
+                        continue
+                except TypeError:
+                    pass
+            break
+
+        self.level += 1
         try:
-            res = p(n, e)
+            res = p(n)
         except ArityError:
-            print(f"ParamCount: {n.rule_name}")
-            print(n.tree_str())
-            sys.exit(1)
+            print(f"ParamCount: {n.rule_name}", file=sys.stderr)
+            print(n.tree_str(), file=sys.stderr)
+            raise
         finally:
             self.level -= 1
+
         if self.debug:
             print(" " * self.level, "<", res)
+
         return res
 
-    def _e_Input(self, n, e):
-        return self._e__list(n, e)
+    def _e_Input(self, n):
+        "top level"
+        self._children = self.env["_e_children"] = []
+        self._e__list(n)
 
-    def _e__list(self, n, e):
-        if self.defs:
-            self._e__list_(n, e)
-            return
-
-        try:
-            self.defs = True
-            self._e__list_(n, e)
-        finally:
-            self.defs = False
-        return self._e__list_(n, e)
-
-    def _e__list_(self, n, e):
-        if not self.defs and "$list$" in e:
-            del e["$list$"]
-            if len(n) == 1 and n[0].rule_name == "child_statements":
-                n = n[0]
-
-            res = []
-            for nn in n:
-                r = self._eval(nn, e)
-                if r is None:
-                    pass
-                else:
-                    res.append(r)
-            return res
-
+    def _e__list(self, n):
         res = None
         for nn in n:
-            r = self._eval(nn, e)
-            if r is None:
-                pass
-            elif res is not None:
-                res += r
-            else:
-                res = r
-        return res
+            self.eval(nn)
 
-    def _e_Include(self, n, e):
+    def _e_Include(self, n):
         """'include' statement.
 
         Adds the file as if it was textually included, except that
         variables from the included file can be overridden.
         """
+        # We do this by hooking up the included file as a parent
+        # environment.
         arity(n, 2)
         p = Parser(debug=False, reduce_tree=False)
         fn = n[1].value[1:-1]
         try:
-            fn = e["_path"].parent / fn
+            fn = self.env["_path"].parent / fn
         except AttributeError:
             fn = Path(fn)
         tree = p.parse(fn.read_text())
-        ep = Env(parent=e, name=str(fn))
-        res = self._eval(tree, ep)
+        ep = Env(parent=self.env, name=str(fn))
+        res = Eval(ep).eval(tree)
         e.inject_vars(ep)
         return res
 
-    def _e_Use(self, n, e):
+    def _e_Use(self, n):
         """'use' statement.
 
         Add the variables and functions defined by the used module (but
         *not* those it itself imports via 'use'!) to the current scope.
         """
-        if not self.defs:
-            return
-
         arity(n, 2)
         p = Parser(debug=False, reduce_tree=False)
         fn = n[1].value[1:-1]
         try:
-            fn = e["_path"].parent / fn
+            fn = self.env["_path"].parent / fn
         except AttributeError:
             fn = Path(fn)
 
         tree = p.parse(fn.read_text())
 
         ep = MainEnv(name=str(fn))
-        self._eval(tree, ep)
-        e.inject_vars(ep)
+        Eval(ep).eval(tree)
+        self.env.inject_vars(ep)
 
-    def _e__descend(self, n, e):
+    @_skip1
+    def _descend(self, n):
         arity(n, 1)
-        return self._eval(n[0], e)
+        return self.eval(n[0])
 
-    def _e_stmt_list(self, n, e):
-        if self.defs:
-            raise RuntimeError("This shouldn't happen")
-        e = Env(parent=e)
+    def _e_stmt_obj(self, n):
+        # a top-level statement that creates an object
+        arity(n, 1)
+        self._children.append(n[0])
 
-        return self._e__list(n[1:-1], e)
+    def _e_stmt_list(self, n):
+        # top-level block
+        e = self.sub(True)
+        for nn in n[1:-1]:
+            e.eval(nn)
+        return e.union()
 
-    _e_explicit_child = _e_stmt_list
+    def sub(self, children=False):
+        e = Eval(Env(parent=self.env))
+        if children:
+            e._children = e.env["_e_children"] = []
+        return e
 
-    def _e_pr_vec_empty(self, n, e):
+    def union(self, nodes: list[Node] | None = None):
+        if nodes is None:
+            nodes = self._children
+        # ln = len(self._children) if self._children else 0
+        res = None
+        for n in nodes:
+            r = self.eval(n)
+            if r is None:
+                continue
+            elif res is None:
+                res = r
+            else:
+                res += r
+
+        # assert ln == len(self._children) if self._children else 0, (n,self._children)
+        return res
+
+    def _e_explicit_child(self, n):
+        ev = self.sub()
+        ev.eval(n[1])
+        assert not self._children
+        self._children = ev._children
+
+    def _e_pr_vec_empty(self, n):
         return ()
 
-    def _e_pr_vec_elems(self, n, e):
-        return self._eval(n[1], e)
+    def _e_pr_vec_elems(self, n):
+        return self.eval(n[1])
 
-    def _e_vector_elements(self, n, e):
+    def _e_vector_elements(self, n):
         res = []
         off = 0
         while off < len(n):
-            res.append(self._eval(n[off], e))
+            res.append(self.eval(n[off]))
             off += 2
         return res
 
-    def _e_expr_case(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_expr_case(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         arity(n, 5)
         if res:
-            return self._eval(n[2], e)
+            return self.eval(n[2])
         else:
-            return self._eval(n[4], e)
+            return self.eval(n[4])
 
-    def _e_logic_or(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_logic_or(self, n):
+        res = self.eval(n[0])
         off = 1
         while len(n) > off:
             if res:
                 return res
             if n[off].value == "||":
-                res = self._eval(n[off + 1], e)
+                res = self.eval(n[off + 1])
             else:
                 raise ValueError("Unknown op", n[off])
             off += 2
         return res
 
-    def _e_logic_and(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_logic_and(self, n):
+        res = self.eval(n[0])
         off = 1
         while len(n) > off:
             if not res:
                 return res
             if n[off].value == "&&":
-                res = self._eval(n[off + 1], e)
+                res = self.eval(n[off + 1])
             else:
                 raise ValueError("Unknown op", n[off])
             off += 2
         return res
 
-    def _e_equality(self, n, e):
-        res = self._eval(n[0], e)
+    def _e_equality(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         off = 1
         while len(n) > off:
-            res2 = self._eval(n[off + 1], e)
+            res2 = self.eval(n[off + 1])
             if n[off].value == "==":
                 if res != res2:
                     return False
@@ -284,13 +365,13 @@ class Eval:
             res = res2
         return True
 
-    def _e_comparison(self, n, e):
-        res = self._eval(n[0], e)
+    def _e_comparison(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         off = 1
         while len(n) > off:
-            res2 = self._eval(n[off + 1], e)
+            res2 = self.eval(n[off + 1])
             if n[off].value == "<":
                 if res >= res2:
                     return False
@@ -309,13 +390,14 @@ class Eval:
             res = res2
         return True
 
-    def _e_addition(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_addition(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         off = 1
         while len(n) > off:
-            res2 = self._eval(n[off + 1], e)
+            res2 = self.eval(n[off + 1])
             if n[off].value == "+":
                 res += res2
             elif n[off].value == "-":
@@ -325,13 +407,14 @@ class Eval:
             off += 2
         return res
 
-    def _e_multiplication(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_multiplication(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         off = 1
         while len(n) > off:
-            res2 = self._eval(n[off + 1], e)
+            res2 = self.eval(n[off + 1])
             if n[off].value == "*":
                 res *= res2
             elif n[off].value == "/":
@@ -343,9 +426,10 @@ class Eval:
             off += 2
         return res
 
-    def _e_unary(self, n, e):
+    @_skip1
+    def _e_unary(self, n):
         arity(n, 1, 2)
-        res = self._eval(n[-1], e)
+        res = self.eval(n[-1])
         if len(n) == 2:
             if n[0].value == "+":
                 pass
@@ -357,116 +441,120 @@ class Eval:
                 raise ValueError("Unknown op", n[0])
         return res
 
-    def _e_exponent(self, n, e):
-        res = self._eval(n[0], e)
+    @_skip1
+    def _e_exponent(self, n):
+        res = self.eval(n[0])
         if len(n) == 1:
             return res
         arity(n, 3)
-        exp = self._eval(n[2], e)
+        exp = self.eval(n[2])
         if n[1].value == "^":
             return math.pow(res, exp)
         else:
             raise ValueError("Unknown op", n[1])
 
-    def _e_call(self, n, e):
-        res = self._eval(n[0], e)
+    def _e_call(self, n):
+        res = self.eval(n[0])
         off = 1
         if off < len(n):
-            with e.cc(res):
-                app = self._eval(n[off], e)
-                res = app(e.current_call or res)
+            with self.env.cc(res):
+                app = self.eval(n[off])
+                res = app(self.env.current_call or res)
             off += 1
         while off < len(n):
-            app = self._eval(n[off], e)
+            app = self.eval(n[off])
             res = app(res)
             off += 1
         return res
 
-    def _e_pr_Num(self, n, e):
+    def _e_pr_Num(self, n):
         val = n.value
         try:
             return int(val)
         except ValueError:
             return float(val)
 
-    def _e_pr_Sym(self, n, e):
-        return e[n.value]
+    def _e_pr_Sym(self, n):
+        return self.env[n.value]
 
-    def _e_pr_paren(self, n, e):
-        return self._eval(n[1], e)
+    @_skip1
+    def _e_pr_paren(self, n):
+        return self.eval(n[1])
 
-    def _e_pr_Str(self, n, e):
+    def _e_pr_Str(self, n):
         return simple_eval(n.value)
 
-    def _e_assignment(self, n, e):
-        e[n[0].value] = self._eval(n[2], e)
+    def _e_assignment(self, n):
+        self.env[n[0].value] = self.eval(n[2])
 
-    def _e_stmt_decl_fn(self, n, e):
+    def _e_stmt_decl_fn(self, n):
         arity(n, 7, 8)
         name = n[1].value
         if len(n) == 8:
-            params = self._eval(n[3], e)
+            params = self.eval(n[3])
         else:
             params = ((), {})
         body = n[-2]
-        e[name] = Function(self, name, params, body, e)
+        self.env[name] = Function(self, name, params, body)
 
-    def _e_stmt_decl_mod(self, n, e):
+    def _e_stmt_decl_mod(self, n):
         arity(n, 5, 6)
         name = n[1].value
-        if name in e:
+        if name in self.env:
+            logger.warning(f"Redefined: {name}")
             return  # already defined
 
         if len(n) == 6:
-            params = self._eval(n[3], e)
+            params = self.eval(n[3])
         else:
             params = ((), {})
         body = n[-1]
-        e[name] = Module(self, name, params, body, e)
+        self.env[name] = Module(self, name, params, body)
 
-    def _e_lce_for(self,n,e):
+    def _e_lce_for(self, n):
         raise ValueError("'for' in list comprehension is not implemented")
 
-    def _e_lce_for3(self,n,e):
+    def _e_lce_for3(self, n):
         raise ValueError("'for' in list comprehension is not implemented")
 
-    def _e_lce_let(self,n,e):
+    def _e_lce_let(self, n):
         raise ValueError("'let' in list comprehension is not implemented")
 
-    def _e_lce_if(self,n,e):
+    def _e_lce_if(self, n):
         raise ValueError("'if' in list comprehension is not implemented")
 
-    def _e_pr_for2(self,n,e):
-        return ForStep(n[1],n[3],1)
+    def _e_pr_for2(self, n):
+        return ForStep(n[1], n[3], 1)
 
-    def _e_pr_for3(self,n,e):
-        return ForStep(n[1],n[3],n[5])
+    def _e_pr_for3(self, n):
+        return ForStep(n[1], n[3], n[5])
 
-    def _e_fn_call(self, n, e):
+    def _e_fn_call(self, n):
         if self.debug:
             print(" " * self.level, "=", n)
 
         arity(n, 3, 4)
-        e.eval = partial(self.eval, env=e)
+
         try:
-            fn = e[n[0].value]
+            fn = self.env[n[0].value]
         except AttributeError:
             raise ValueError(f"Function {n[0].value !r} undefined") from None
         if len(n) == 3:
             return fn()
-        a, k = self._eval(n[2], e)
+        e = self.sub()
+        a, k = e.eval(n[2])
         return fn(*a, **k)
 
-    def _e_arguments(self, n, e):
+    def _e_arguments(self, n):
         arity(n, 1, 2)
-        return self._eval(n[0], e)
+        return self.eval(n[0])
 
-    def _e_argument_list(self, n, e):
+    def _e_argument_list(self, n):
         a = []
         k = {}
         off = 0
         while len(n) > off:
-            v = self._eval(n[off], e)
+            v = self.eval(n[off])
             if len(v) == 1:
                 a.append(v[0])
             elif v[0] in k:
@@ -478,24 +566,24 @@ class Eval:
             off += 2
         return a, k
 
-    def _e_argument(self, n, e):
+    def _e_argument(self, n):
         if len(n) == 1:
-            return (self._eval(n[0], e),)
+            return (self.eval(n[0]),)
         else:
             arity(n, 3)
             return (
                 n[0].value,
-                self._eval(n[2], e),
+                self.eval(n[2]),
             )
 
-    def _e_add_args(self, n, e):
+    def _e_add_args(self, n):
         if len(n) == 2:
             return lambda x: x()
         arity(n, 3)
-        a, k = self._eval(n[1], e)
+        a, k = self.eval(n[1])
         return lambda x: x(*a, **k)
 
-    def _e_add_index(self, n, e):
+    def _e_add_index(self, n):
         if len(n) == 2:
             return lambda x: x()
         arity(n, 3, 999)
@@ -503,25 +591,28 @@ class Eval:
         i = 1
         idx = []
         while i < len(n):
-            a = self._eval(n[1], e)
+            a = self.eval(n[1])
             i += 2
             idx.append(a)
-        def ind(idx,x):
+
+        def ind(idx, x):
             for i in idx:
-                x=x[i]
+                x = x[i]
             return x
-        return partial(ind,idx)
 
-    def _e_parameters(self, n, e):
+        return partial(ind, idx)
+
+    @_skip1
+    def _e_parameters(self, n):
         arity(n, 1, 2)
-        return self._eval(n[0], e)
+        return self.eval(n[0])
 
-    def _e_parameter_list(self, n, e):
+    def _e_parameter_list(self, n):
         a = []
         k = {}
         off = 0
         while len(n) > off:
-            v = self._eval(n[off], e)
+            v = self.eval(n[off])
             if len(v) == 1:
                 a.append(v[0])
             elif v[0] in k:
@@ -531,101 +622,89 @@ class Eval:
             off += 2
         return a, k
 
-    def _e_parameter(self, n, e):
+    def _e_parameter(self, n):
         if len(n) == 1:
             return (n[0].value,)
         else:
             arity(n, 3)
             return (
                 n[0].value,
-                self._eval(n[2], e),
+                self.eval(n[2]),
             )
 
-    def _e_mod_inst_child(self, n, e):
+    def _e_mod_inst_child(self, n):
         if len(n) == 1:
-            return self._eval(n[0], e)
+            return self.eval(n[0])
         arity(n, 2)
 
-        dd = { "_e_children": n[1] }
-        e = Env(parent=e, init=dd)
-        return self._eval(n[0], e)
+        dd = {"_e_children": n[1]}
+        e = Env(parent=self.env, init=dd)
+        return Eval(e).eval(n[0])
 
-    def _e_no_child(self, n, e):
+    def _e_no_child(self, n):
         return None
 
-    def _e_EOF(self, n, e):
+    def _e_EOF(self, n):
         return None
 
-    def _e_statement(self, n, e):
+    def _e_statement(self, n):
         arity(n, 1)
         n = n[0]
-        if n.rule_name not in {"assignment", "stmt_decl_mod", "stmt_decl_fn"}:
-            if self.defs:
-                return
-        else:
-            if not self.defs:
-                return
-        return self._eval(n, e)
+        res = self.eval(n)
+        if isinstance(res, Compound) and res._dim is None:
+            raise RuntimeError("Dimension problem", n)
+        return res
 
-    def _e_child_statement(self, n, e):
+    @_skip1
+    def _e_child_statement(self, n):
         arity(n, 1)
-        # return self._eval(n[0], e)
-        return self._e_statement(n, e)
+        return self.eval(n[0])
 
-    def _e_pr_true(self, n, e):
+    def _e_pr_true(self, n):
         return True
 
-    def _e_pr_false(self, n, e):
+    def _e_pr_false(self, n):
         return False
 
-    def _e_pr_undef(self, n, e):
+    def _e_pr_undef(self, n):
         return None
 
-    def _e_mod_inst_bang(self, n, e):
+    def _e_mod_inst_bang(self, n):
         "!foo: isolated"
         warnings.warn("Object isolation is not yet supported")
-        return self._eval(n[1], e)
+        return self.eval(n[1])
 
-    def _e_mod_inst_hash(self, n, e):
+    def _e_mod_inst_hash(self, n):
         "#foo: highlighted"
         warnings.warn("Object highlighting is not yet supported")
-        return self._eval(n[1], e)
+        return self.eval(n[1])
 
-    def _e_mod_inst_perc(self, n, e):
+    def _e_mod_inst_perc(self, n):
         "%foo: transparent"
         warnings.warn("Object transparency is not yet supported")
-        return self._eval(n[1], e)
+        return self.eval(n[1])
 
-    def _e_mod_inst_star(self, n, e):
+    def _e_mod_inst_star(self, n):
         "*foo: disabled"
         return None
 
-    def _e_child_statements(self, n, e):
-        return self._e__list(n, e)
+    def _e_child_statements(self, n):
+        return self._e__list(n)
 
-    def _e_ifelse_statement(self, n, e):
+    def _e_ifelse_statement(self, n):
         n = n[0]
         arity(n, 5, 7)
-        res = self._eval(n[2], e)
+        res = self.eval(n[2])
         if res:
-            return self._eval(n[4], e)
+            return self.eval(n[4])
         elif len(n) < 7:
             return None
         else:
-            return self._eval(n[6], e)
+            return self.eval(n[6])
 
-    _e_primary = _e__descend
-    _e_module_instantiation = _e__descend
-    _e_vector_element = _e__descend
-    _e_expr = _e__descend
-    _e_addon = _e__descend
-
-    def eval(self, node=None, env: Env = None):
-        """Evaluates a (sub)tree.
-
-        @node: the tree to process
-        @env: the environment to use
-        """
-        if env is None:
-            env = self.env
-        return self._eval(node or self.nodes, env)
+    _e_primary = _descend
+    _e_module_instantiation = _descend
+    _e_vector_element = _descend
+    _e_expr = _descend
+    _e_addon = _descend
+    _e_statement = _descend

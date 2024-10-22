@@ -11,14 +11,31 @@ import math
 import warnings
 from contextlib import contextmanager
 
-from .vars import Vars
 from . import env
+from .vars import Vars
 
-from build123d import Align,Pos,Rot,Axis,Plane
-from build123d import Solid,Shell,Face,Edge,Wire,Vector,Line
-from build123d import Rectangle,Circle,Box,Cylinder,Sphere,Polygon,Polyline,Text
-from build123d import loft,extrude,scale,revolve,make_face
-import math
+from build123d import (
+    Align,
+    Axis,
+    Box,
+    Circle,
+    Compound,
+    Face,
+    Plane,
+    Polyline,
+    Pos,
+    Rectangle,
+    Rot,
+    Shell,
+    Solid,
+    Sphere,
+    Text,
+    extrude,
+    loft,
+    make_face,
+    revolve,
+    scale,
+)
 
 
 class ForStep:
@@ -26,6 +43,7 @@ class ForStep:
         self.start = start
         self.end = end
         self.step = step
+
 
 class EnvCall:
     """Environment-specific function call."""
@@ -37,17 +55,15 @@ class EnvCall:
 
     def __call__(self, *a, **k):  # noqa:D102  # XXX
         vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
+
+        token = env.set(self.env)
         try:
-            return vars[self.fn](*a, _env=self.env, **k)
-        except TypeError:
-            try:
-                tok = env.set(self.env)
-                return vars[self.fn](*a, **k)
-            except TypeError as e:
-                raise e from None
-            finally:
-                if tok is not None:
-                    env.reset(tok)
+            val = vars[self.fn]
+            if not callable(val):
+                raise TypeError(f"Not callable: {val}")
+            return val(*a, **k)
+        finally:
+            env.reset(token)
 
 
 class Env:
@@ -66,7 +82,9 @@ class Env:
         if isinstance(parent, Env):
             self.parent = parent
             self.vars = parent.vars.child(name, init=init)
-            self.vars_dyn = vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name, init=init)
+            self.vars_dyn = (
+                vars_dyn if vars_dyn is not None else parent.vars_dyn.child(name, init=init)
+            )
         else:
             if init is not None:
                 raise ValueError("invalid")
@@ -88,7 +106,7 @@ class Env:
                 except AttributeError:
                     if k[-1] == "_" or k[0] == "_":
                         raise
-                    return getattr(self, k+"_")
+                    return getattr(self, k + "_")
             except AttributeError:
                 raise KeyError(k) from None
         else:
@@ -185,20 +203,31 @@ class Env:
         return ev.eval()
 
     def for_(self, _intersect=False, **var):
-        from .eval import Eval
 
         if len(var) != 1:
             if len(var):
                 raise ValueError("'for' called without variables")
             else:
-                raise ValueError(f"'for' called with more than one variable ({','.join(var.keys())})")
-        var,stepper = next(iter(var.items()))
+                raise ValueError(
+                    f"'for' called with more than one variable ({','.join(var.keys())})",
+                )
+        var, stepper = next(iter(var.items()))
 
         res = None
         e = Env(self)
         ch = self.vars["_e_children"]
 
-        for val in stepper if isinstance(stepper,(list,tuple)) else range(self.eval(node=stepper.start), self.eval(node=stepper.end), stepper.step if isinstance(stepper.step,(int,float)) else self.eval(node=stepper.step)):
+        for val in (
+            stepper
+            if isinstance(stepper, (list, tuple))
+            else range(
+                self.eval(node=stepper.start),
+                self.eval(node=stepper.end),
+                stepper.step
+                if isinstance(stepper.step, (int, float))
+                else self.eval(node=stepper.step),
+            )
+        ):
             e.set(var, val)
 
             r = self.eval(node=ch, env=e)
@@ -252,7 +281,7 @@ class Env:
         if r1 == r2:
             res = extrude(res, h)
         else:
-            res = loft((res, Pos(0,0,h) * Circle(r2)))
+            res = loft((res, Pos(0, 0, h) * Circle(r2)))
         if center:
             res = Pos(0, 0, -h / 2) * res
         return res
@@ -267,10 +296,10 @@ class Env:
         ch = self._children()
         if ch is None:
             return None
-        if v is not None and v != [0,0,0]:
-            return ch.rotate((0, 0, 0), v, a)
+        if v is not None and v != [0, 0, 0]:
+            return ch.rotate(v, a)
         elif isinstance(a, (float, int)):
-            return ch.rotate((0, 0, 0), (0, 0, 1), a)
+            return ch.rotate(Axis.Z, a)
         else:
             if a[0]:
                 ch = ch.rotate(Axis.X, a[0])
@@ -292,6 +321,13 @@ class Env:
         res = ch[0]
         if res is None:
             return None
+        if isinstance(res, Compound) and res._dim is None:
+            breakpoint()
+        if isinstance(res, (tuple, list)):
+            if len(res) == 1:
+                res = res[0]
+            else:
+                raise ValueError("too many elements")
 
         ct = []
         for obj in ch[1:]:
@@ -300,7 +336,13 @@ class Env:
             ct.append(obj)
         if not ct:
             return res
-        return res.cut(*ct).clean()
+        if False:
+            rr = res.cut(*ct).clean()
+        else:
+            rr = res
+            for c in ct:
+                rr -= c
+        return rr
 
     def union(self):  # noqa:D102
         return self._children()
@@ -319,7 +361,7 @@ class Env:
                 res &= obj
         return res.clean()
 
-    def _children(self, idx=None, _ch=None, as_list=False):  # noqa:D102
+    def _children(self, idx=None, _ch=None, as_list=False):
         if _ch is None:
             _ch = self.vars["_e_children"]
         if idx is not None:
@@ -348,7 +390,7 @@ class Env:
             # Our __init__ stores the variables to both
         except KeyError:
             return None
-        return self._children(idx,ch)
+        return self._children(idx, ch)
 
     def import_(self, name):
         fn = self["_path"].parent / name
@@ -360,33 +402,26 @@ class Env:
         return self.polyhedron(points, faces)
 
     def polyhedron(self, points, faces, convexity=None):
-        from typing import Iterable, cast
-        points = [ tuple(x) for x in points ]
+
+        points = [tuple(x) for x in points]
 
         def PL(path):
             return Polyline(*((points[x]) for x in path), close=True)
 
-        
-        return Solid.make_solid(
-            Shell.make_shell(
-                Face.make_from_wires(
-                    PL(face)
-                )
-                for face in faces
-            )
-        )
+        return Solid.make_solid(Shell.make_shell(Face.make_from_wires(PL(face)) for face in faces))
 
     def polygon(self, points, paths=None):
         if paths is None:
-            p_ext = [ tuple(x) for x in points ]
+            p_ext = [tuple(x) for x in points]
             p_int = []
         else:
-            p_ext = [ tuple(points[x]) for x in paths[0]]
-            p_int = [ [tuple(points[x]) for x in xx] for xx in paths[1:] ]
-        print(p_ext,p_int)
+            p_ext = [tuple(points[x]) for x in paths[0]]
+            p_int = [[tuple(points[x]) for x in xx] for xx in paths[1:]]
+        print(p_ext, p_int)
+
         def PL(pts):
             res = Polyline(pts, close=True)
-            return make_face(res,Plane.XY)
+            return make_face(res, Plane.XY)
 
         res = PL(p_ext)
         for x in p_int:
@@ -398,8 +433,7 @@ class Env:
         res = self.eval(node=ch)
         return res
 
-    def linear_extrude(self, height, center=False, convexity=None, twist=0,
-            slices=0, scale=1):
+    def linear_extrude(self, height, center=False, convexity=None, twist=0, slices=0, scale=1):
         if scale != 1 and twist != 0:
             warnings.warn("Scaling+twisting not yet supported")
             scale = 1
@@ -413,25 +447,25 @@ class Env:
         if scale == 1 and twist == 0:
             res = extrude(res, amount=height)
         else:
-            res = loft((res, Pos(0,0,height) * Rot(0,0,-twist) * res.scale(scale)))
-#       else:
-#           warnings.warn("Scaling / twisting linear extrusions doesn't work yet")
-#           res = None
+            res = loft((res, Pos(0, 0, height) * Rot(0, 0, -twist) * res.scale(scale)))
+        #       else:
+        #           warnings.warn("Scaling / twisting linear extrusions doesn't work yet")
+        #           res = None
         if center:
             res = Pos(0, 0, -height / 2) * res
         return res
 
     def scale(self, v):
-        if isinstance(v,(float,int)):
-            x,y,z = v,v,v
+        if isinstance(v, (float, int)):
+            x, y, z = v, v, v
         else:
-            x,y,z = v
+            x, y, z = v
 
         ch = self.vars["_e_children"]
         res = self.eval(node=ch)
         if res is None:
             return None
-        return scale(res, (x,y,z))
+        return scale(res, (x, y, z))
 
     def rotate_extrude(self, angle=360, convexity=None):
         ch = self.vars["_e_children"]
@@ -440,11 +474,10 @@ class Env:
             return None
 
         res = revolve(res, Axis.Y, revolution_arc=abs(angle))
-        res = res.rotate(Axis.X,90)
+        res = res.rotate(Axis.X, 90)
         if angle < 0:
             res = res.rotate(Axis.Z, angle)
         return res
-
 
     def color(self, c, a=None):
         warnings.warn("Color is not yet supported")
@@ -452,12 +485,14 @@ class Env:
         return self.eval(node=ch)
 
     def square(self, size=1, center=False):
-        if isinstance(size,(int,float)):
-            x,y = size,size
+        if isinstance(size, (int, float)):
+            x, y = size, size
         else:
-            x,y = size
+            x, y = size
 
-        return Rectangle(x,y, align=(Align.CENTER,Align.CENTER) if center else (Align.MIN,Align.MIN))
+        return Rectangle(
+            x, y, align=(Align.CENTER, Align.CENTER) if center else (Align.MIN, Align.MIN),
+        )
 
     def circle(self, r=None, d=None):
         if r is None:
@@ -470,15 +505,24 @@ class Env:
 
         return Circle(r)
 
-    def text(self, t, size=10, font=None, halign="left", valign="baseline",
-             spacing=1, direction="ltr", language=None, script=None):
-
+    def text(
+        self,
+        t,
+        size=10,
+        font=None,
+        halign="left",
+        valign="baseline",
+        spacing=1,
+        direction="ltr",
+        language=None,
+        script=None,
+    ):
         def _align(x):
             if x is None or x == "baseline":
-                return None # Align.NONE
-            if x in ("left","top"):
+                return None  # Align.NONE
+            if x in ("left", "top"):
                 return Align.MIN
-            if x in ("right","bottom"):
+            if x in ("right", "bottom"):
                 return Align.MAX
             if x == "center":
                 return Align.CENTER
@@ -486,7 +530,7 @@ class Env:
             warnings.warn(f"What alignment is {x!r}?")
             return Align.NONE
 
-        args = { 'align': (_align(halign), _align(valign)) }
+        args = {"align": (_align(halign), _align(valign))}
         if font is not None:
             args["font"] = font
         if direction != "ltr":
@@ -504,7 +548,7 @@ class Env:
     def chr(self, *x):
         res = ""
         for y in x:
-            if isinstance(y,int):
+            if isinstance(y, int):
                 res += chr(y)
             else:
                 res += "".join(chr(z) for z in y)
@@ -516,32 +560,33 @@ class Env:
         except ValueError:
             return None
 
-    def min(self,*x):
+    def min(self, *x):
         return min(*x)
 
-    def max(self,*x):
+    def max(self, *x):
         return max(*x)
 
-    def floor(self,x):
+    def floor(self, x):
         return math.floor(x)
 
-    def ceil(self,x):
+    def ceil(self, x):
         return math.ceil(x)
 
     def sin(self, x):
-        return math.sin(x*math.pi/180)
+        return math.sin(x * math.pi / 180)
 
     def cos(self, x):
-        return math.cos(x*math.pi/180)
+        return math.cos(x * math.pi / 180)
 
     def tan(self, x):
-        return math.tan(x*math.pi/180)
+        return math.tan(x * math.pi / 180)
 
     def atan(self, x):
-        return math.atan(x)*180/math.pi
+        return math.atan(x) * 180 / math.pi
 
     def atan2(self, x, y):
-        return math.atan2(x, y)*180/math.pi
+        return math.atan2(x, y) * 180 / math.pi
+
 
 class MainEnv(Env):
     "main environment with global variables"

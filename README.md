@@ -1,29 +1,36 @@
-# OpensCadQ
+# buildSCAD
 
-An interpreter for OpenSCAD that emits build123d objects.
+An interpreter for OpenSCAD that emits OCC objects, wrapped with build123d.
+
 
 ## Rationale
 
 Today's 3D programs can import STEP models, thus can deal with "real"
 curves and solids instead of mesh approximations.
 
-Unfortunately, the CGAL 3D package used by OpenSCAD is mesh-based and can't
-deal with that.
+Unfortunately, the CGAL 3D package used by OpenSCAD is mesh-based. Owch.
 
-On the other hand, OpenSCAD is reasonably common for creating parameterized
-models algorithmically.
+On the other hand, OpenSCAD is somewhat widely used for creating
+parameterized models algorithmically. Sites like Thingiverse or Printables
+contain quite a few models built with it.
+
+This package translates OpenSCAD to "real" 3D models.
 
 
 ## Approach
 
-This Python package interprets OpenSCAD code and builds a build123d
-object. The result can be used just like any other 3d object.
+The OpenSCAD code is parsed into a syntax tree and interpreted on the fly
+when a "module" (in OpenSCAD terms) is called.
+
+The result is an OCC Solid (or sketch if 2D), wrapped with build123d,
+and can be used just like any other object.
+
 
 ### Functional replacements
 
 If a module cannot be implemented in build123d/OCC, most likely because it
-uses ``hull``, often the most expedient fix is to write a replacement in
-Python.
+uses ``hull`` or ``minkowsky``, often the most expedient fix is to write a
+replacement in Python.
 
 To use this feature, simply add a function with the desired name to the
 environment you pass to ``process``, or pre-load a Python file.
@@ -58,7 +65,7 @@ Implementing them is *way* out of scope for this project.
 
 ### Evaluation Order
 
-Unlike OpenSCAD, our parser does *not* delay evaluation of variables.
+Our parser delays evaluation of variables until they're needed.
 
 In other words, this …
 
@@ -66,31 +73,30 @@ In other words, this …
 	bar = foo(123);
 	function foo(x) = x;
 
-… does not work and will complain about undefined code. Please re-arrange your code.
+… works just fine.
 
 
 ### Variable handling
 
 Unknown variables (i.e. those that are never assigned to) cause an error.
-Unfilled parameters are still "undef", i.e.
+As in OpenSCAD, unfilled parameters are "undef", i.e.
 
 	function xx(a,b) = b;
 	echo(xx(1));
 
 does emit "ECHO: undef".
 
+
 ### Value redefinition
 
-OpenSCAD warns when redeclaring a variable: in effect, it re-orders
-statements, which can have interesting side effects.
+Updating a variable will emit a warning but not change the value.
 
-By contrast, in opensCadQ updating a variable will emit a warning but not
-change the value.
 
 ### included files
 
 Variables declared in include files can be overridden in the main code, as in OpenSCAD.
 However, values from included files don't filter back to the main code.
+
 
 ## TODO
 
