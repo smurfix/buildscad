@@ -5,35 +5,13 @@ from functools import partial
 from pathlib import Path
 
 from openscadq import parse
+from openscadq._test import testcase as reader
 
 
 def _test(i):
     import tests.env_openscad as _env
 
-    # Get the OpenSCAD part
-
-    env1 = parse(f"tests/models/{i :03d}.scad")
-    try:
-        m1 = env1["work"]
-    except KeyError:
-        # Oh well. Gathering toplevel elements.
-        from openscadq.eval import Eval
-
-        ev = Eval(env1)
-        m1 = ev.union(env1["_e_children"])
-
-    else:
-        m1 = m1()
-
-    # Get the Python part
-
-    pyf = Path(f"tests/models/{i :03d}.py")
-    py = pyf.read_text()
-    pyc = compile(py, str(pyf), "exec")
-    env2 = {}
-    exec(pyc, _env.__dict__, env2)
-    m2 = env2["work"]()
-    tol = env2.get("tolerance", 0.001)
+    res = reader(i)
 
     # Compare the two. They must be (a) same size,
     # (b) occupy the same space.
@@ -41,15 +19,20 @@ def _test(i):
     # Instead we add them and make sure that the size doesn't change.
     # (Also, that's faster, because subtraction isn't symmetric.)
 
-    v1 = m1.volume
-    v2 = m2.volume
-    assert abs(v1 - v2) < tol
+    if len(res) <= 2:
+        raise ValueError("Not enough results")
+    v = [(x.volume,n) for x,n in res.models]
+    mods = iter(res.models)
+    msum = next(mods)[0]
+    for m,n in mods:
+        msum += m
+    msum = msum.volume
 
-    m12 = m1 + m2
-    v12 = m12.volume
-    assert abs(v12 - v1) < tol
-    assert abs(v12 - v2) < tol
-
+    vn,vname = v.pop()
+    assert abs(msum - vn) < res.tolerance, (msum,vname,vn)
+    for vv,vvn in v:
+        assert abs(vn - vv) < res.tolerance, (vname,vn, vvn,vv)
+        assert abs(msum - vv) < res.tolerance, (msum, vvn,vv)
 
 _i = 0
 while True:
