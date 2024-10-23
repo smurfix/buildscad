@@ -35,9 +35,14 @@ def _test(i):
         assert abs(msum - vv) < res.tolerance, (msum, vvn,vv)
 
 _i = 0
+_missing = 0
 while True:
     _i += 1
-    if not os.path.exists(f"tests/models/{_i :03d}.scad"):
-        break
+    if not os.path.exists(f"tests/models/{_i :03d}.scad") and \
+       not os.path.exists(f"tests/models/{_i :03d}.py"):
+        _missing += 1
+        if _missing > 10:
+            break
+        continue
     print("TEST", _i)
     globals()[f"test_{_i :03d}"] = partial(_test, _i)
