@@ -25,9 +25,9 @@ except NameError:
         print(a)
 
 def tc(i):
-    a,b = testcase(i)
-    show_object(a.wrapped,f"translated {i}")
-    show_object(b.wrapped,f"Python {i}")
+    res = testcase(i)
+    for v,k in res.models:
+        show_object(v.wrapped,f"{k} {i}")
 
 
 tc(4)
