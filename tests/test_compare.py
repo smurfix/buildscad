@@ -19,7 +19,7 @@ def _test(i):
     # Instead we add them and make sure that the size doesn't change.
     # (Also, that's faster, because subtraction isn't symmetric.)
 
-    if len(res) <= 2:
+    if len(res) < 2:
         raise ValueError("Not enough results")
     v = [(x.volume,n) for x,n in res.models]
     mods = iter(res.models)
