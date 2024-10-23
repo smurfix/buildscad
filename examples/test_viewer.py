@@ -1,5 +1,13 @@
-import sys
+import sys, os
 from build123d import *
+from pathlib import Path
+
+if Path("./tests/models").exists():
+    pass
+elif Path("../tests/models").exists():
+    os.chdir("..")
+else:
+    raise RuntimeError("Tests not found")
 
 if "/src/openscadq/src" not in sys.path:
     sys.path.insert(0,"/src/openscadq/src")
