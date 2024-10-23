@@ -592,9 +592,10 @@ class MainEnv(Env):
     "main environment with global variables"
 
     def __init__(self, name="_main", vars_dyn=None):
-        vars = Vars(name=name)
+        ivars = Vars(name=f"{name} (init)")
+        vars = Vars(name=name, parent=ivars)
         super().__init__(parent=vars, name=name, vars_dyn=vars_dyn)
-        self.vars["$fn"] = 999
-        self.vars["$fa"] = 0
-        self.vars["$fs"] = 0.001
+        ivars["$fn"] = 999
+        ivars["$fa"] = 0
+        ivars["$fs"] = 0.001
         self.vars["$preview"] = 0
