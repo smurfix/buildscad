@@ -11,6 +11,8 @@ from build123d import Mesher, Shape
 
 class Res:
     tolerance = 0.001
+    numeric = False
+
     def __init__(self):
         self._models = {}
     def add(self, name, model):
@@ -39,50 +41,60 @@ def testcase(i):
         py = pyf.read_text()
         pyc = compile(py, str(pyf), "exec")
         env2 = {}
-        exec(pyc, _env.__dict__, env2)
-
-        with suppress(KeyError):
-            result.volume = env2["volume"]
-        with suppress(KeyError):
-            result.tolerance = env2["tolerance"]
-        with suppress(KeyError):
-            params = env2["params"]
-        with suppress(KeyError):
-            run = env2["run"]
-
-        try:
-            m2 = env2["work"]
-        except KeyError:
-            res = None
-            for v in env2.values():
-                if not isinstance(v,Shape) or v._dim != 3:
-                    continue
-                if res is None:
-                    res = v
-                else:
-                    res += v
-            assert res, "No Python results. Did you assign them to something?"
-            m2 = res
+        env2.update(_env.__dict__)
+        exec(pyc, env2, env2)
+        if "result" in env2:
+            result.add("python",env2["result"]())
+            result.numeric = True
         else:
-            m2 = m2(**params)
-        result.add("python",m2)
+            with suppress(KeyError):
+                result.volume = env2["volume"]
+            with suppress(KeyError):
+                result.tolerance = env2["tolerance"]
+            with suppress(KeyError):
+                params = env2["params"]
+            with suppress(KeyError):
+                run = env2["run"]
+            try:
+                res = env2["result"]
+            except KeyError:
+                try:
+                    m2 = env2["work"]
+                except KeyError:
+                    res = None
+                    for v in env2.values():
+                        if not isinstance(v,Shape) or v._dim != 3:
+                            continue
+                        if res is None:
+                            res = v
+                        else:
+                            res += v
+                    assert res, "No Python results. Did you assign them to something?"
+                    m2 = res
+                else:
+                    m2 = m2(**params)
+                result.add("python",m2)
 
     scadf = f"tests/models/{i :03d}.scad"
     env1 = parse(scadf)
-    try:
-        m1 = env1["work"]
-    except KeyError:
-        # Oh well. Gather toplevel elements instead.
-        from openscadq.eval import Eval
-
-        ev = Eval(env1)
-        m1 = ev.union(env1["_e_children"])
+    if result.numeric:
+        m1 = env1["result"]
+        result.add("parser", m1)
     else:
-        m1 = m1(**params)
-    result.add("parser", m1)
+        try:
+            m1 = env1["work"]
+        except KeyError:
+            # Oh well. Gather toplevel elements instead.
+            from openscadq.eval import Eval
+
+            ev = Eval(env1)
+            m1 = ev.union(env1["_e_children"])
+        else:
+            m1 = m1(**params)
+        result.add("parser", m1)
 
  
-    if run:
+    if run and not result.numeric:
         with NamedTemporaryFile(suffix=".stl") as tf,NamedTemporaryFile(suffix=".txt") as out:
             spawn(["openscad","--export-format=binstl", "-o",tf.name,scadf], check=True, stdin=DEVNULL, stdout=out, stderr=out, text=True)
             m3 = Mesher().read(tf.name)

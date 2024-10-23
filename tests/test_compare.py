@@ -21,6 +21,24 @@ def _test(i):
 
     if len(res) < 2:
         raise ValueError("Not enough results")
+
+    if res.numeric:
+        v = iter(res.models)
+        try:
+            vn = res.value
+        except AttributeError:
+            vn,vname = next(v)
+            if callable(vn):
+                breakpoint()
+                vn=vn()
+        else:
+            vname = "preset"
+        for vv,vvn in v:
+            if callable(vv):
+                vv=vv()
+            assert abs(vn - vv) < res.tolerance, (vname,vn, vvn,vv)
+        return
+
     v = [(x.volume,n) for x,n in res.models]
     mods = iter(res.models)
     msum = next(mods)[0]
