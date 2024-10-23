@@ -28,7 +28,12 @@ def _test(i):
         msum += m
     msum = msum.volume
 
-    vn,vname = v.pop()
+    try:
+        vn = res.volume
+    except AttributeError:
+        vn,vname = v.pop()
+    else:
+        vname = "preset"
     assert abs(msum - vn) < res.tolerance, (msum,vname,vn)
     for vv,vvn in v:
         assert abs(vn - vv) < res.tolerance, (vname,vn, vvn,vv)

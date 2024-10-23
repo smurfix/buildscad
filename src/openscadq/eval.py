@@ -12,7 +12,7 @@ from pathlib import Path
 
 from . import env
 from .peg import Parser
-from .work import Env, ForStep, MainEnv
+from .work import Env, ForStep, MainEnv, EnvEval
 
 from arpeggio import ParseTreeNode as Node
 from build123d.topology import Compound
@@ -485,7 +485,7 @@ class Eval:
         return simple_eval(n.value)
 
     def _e_assignment(self, n):
-        self.env[n[0].value] = self.eval(n[2])
+        self.env[n[0].value] = EnvEval(n[2])
 
     def _e_stmt_decl_fn(self, n):
         arity(n, 7, 8)

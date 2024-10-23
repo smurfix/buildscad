@@ -11,7 +11,7 @@ import math
 import warnings
 from contextlib import contextmanager
 
-from . import env
+from . import env as env_
 from .vars import Vars
 
 from build123d import (
@@ -56,14 +56,29 @@ class EnvCall:
     def __call__(self, *a, **k):  # noqa:D102  # XXX
         vars = self.env.vars_dyn if self.fn[0] == "$" else self.env.vars
 
-        token = env.set(self.env)
+        token = env_.set(self.env)
         try:
             val = vars[self.fn]
             if not callable(val):
                 raise TypeError(f"Not callable: {val}")
             return val(*a, **k)
         finally:
-            env.reset(token)
+            env_.reset(token)
+
+
+class EnvEval:
+    """Deferred evaluator."""
+
+    def __init__(self, node):
+        self.node = node
+
+    def __call__(self, /, env):
+        from .eval import Eval
+        token = env_.set(env)
+        try:
+            return Eval(env).eval(self.node)
+        finally:
+            env_.reset(token)
 
 
 class Env:
@@ -110,7 +125,11 @@ class Env:
             except AttributeError:
                 raise KeyError(k) from None
         else:
-            if isinstance(fn, EnvCall):
+            if isinstance(fn, EnvEval):
+                # deferred evaluation
+                fn = fn(self)
+                self.set(k, fn)
+            elif isinstance(fn, EnvCall):
                 pass
             elif callable(fn):
                 fn = EnvCall(k, env=self)

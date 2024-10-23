@@ -13,10 +13,10 @@ class Res:
     tolerance = 0.001
     def __init__(self):
         self._models = {}
-    def add(self, name, x):
-        if x is None:
+    def add(self, name, model):
+        if model is None:
             return
-        self._models[name] = x
+        self._models[name] = model
     @property
     def models(self):
         for k,v in self._models.items():
@@ -41,6 +41,8 @@ def testcase(i):
         env2 = {}
         exec(pyc, _env.__dict__, env2)
 
+        with suppress(KeyError):
+            result.volume = env2["volume"]
         with suppress(KeyError):
             result.tolerance = env2["tolerance"]
         with suppress(KeyError):
