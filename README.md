@@ -97,6 +97,41 @@ Updating a variable will emit a warning but not change the value.
 Variables declared in include files can be overridden in the main code, as in OpenSCAD.
 However, values from included files don't filter back to the main code.
 
+## Testing
+
+The subdirectory ``tests/models`` includes various OpenSCAD files, with
+accompanying Python code.
+
+The models in these files are built in three ways:
+
+* directly by OpenSCAD
+* by emulating OpenSCAD
+* by Python code
+
+The test builder calls the ``work`` function (Python) / module (OpenSCAD).
+If that doesn't exist, top-level objects (OpenScad) / variables (Python) are used.
+
+The following special constants are recognized:
+
+* tolerance
+
+  The maximum difference (volume) between the various models. The default
+  is 0.001 but anything that depends on OpenSCAD's ``$fn`` probably
+  requires looser constraints.
+
+* volume
+
+  The volume (in mm³) that the model is supposed to have.
+
+If the Python part only contains constants, it must declare an empty
+``work`` function. Otherwise the test code assumes that you wrote e.g.
+``Sphere(42)`` without actually assigning the result to anything,
+and thus refuses to accept the testcase.
+
+### Viewing tests
+
+``examples/test_viewer.py`` can be used in GQ-Editor to compare models
+visually.
 
 ## TODO
 
