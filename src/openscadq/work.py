@@ -216,10 +216,12 @@ class Env:
         return res
 
     def eval(self, node, env=None):
+        from .eval import Eval
         if env is None:
             env = self
-        ev = Eval(node, env=env)
-        return ev.eval()
+
+        ev = Eval(env=env)
+        return ev.eval(node)
 
     def for_(self, _intersect=False, **var):
 
@@ -385,15 +387,13 @@ class Env:
         if idx is not None:
             as_list = True
 
+        from .eval import Eval
+        ev = Eval(Env(self))
+        ev.eval(_ch)
         if as_list:
-            self.vars_dyn["$list$"] = True
-            try:
-                res = self.eval(node=_ch)
-            finally:
-                if "$list$" in self.vars_dyn:
-                    del self.vars_dyn["$list$"]
+            res = [ ev.eval(c) for c in ev._children ]
         else:
-            res = self.eval(node=_ch)
+            res = res.union()
 
         if res is None:
             return None

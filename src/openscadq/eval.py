@@ -288,9 +288,9 @@ class Eval:
         return res
 
     def _e_explicit_child(self, n):
-        ev = self.sub()
+        ev = self.sub(True)
         ev.eval(n[1])
-        assert not self._children
+        assert not getattr(self,"_children", False)
         self._children = ev._children
 
     def _e_pr_vec_empty(self, n):
@@ -637,7 +637,9 @@ class Eval:
             return self.eval(n[0])
         arity(n, 2)
 
-        dd = {"_e_children": n[1]}
+        assert n[1].rule_name == "child_statement"
+        assert len(n[1]) == 1
+        dd = {"_e_children": n[1][0]}
         e = Env(parent=self.env, init=dd)
         return Eval(e).eval(n[0])
 
@@ -655,10 +657,9 @@ class Eval:
             raise RuntimeError("Dimension problem", n)
         return res
 
-    @_skip1
     def _e_child_statement(self, n):
         arity(n, 1)
-        return self.eval(n[0])
+        self._children.append(n[0])
 
     def _e_pr_true(self, n):
         return True
