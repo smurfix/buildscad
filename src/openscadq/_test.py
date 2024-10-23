@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 from contextlib import suppress
 
 from openscadq import parse
-from build123d import Mesher, Solid
+from build123d import Mesher, Shape
 
 class Res:
     tolerance = 0.001
@@ -52,13 +52,14 @@ def testcase(i):
             m2 = env2["work"]
         except KeyError:
             res = None
-            for v in m2.values():
-                if not isinstance(v,Solid):
+            for v in env2.values():
+                if not isinstance(v,Shape) or v._dim != 3:
                     continue
                 if res is None:
                     res = v
                 else:
                     res += v
+            assert res, "No Python results. Did you assign them to something?"
             m2 = res
         else:
             m2 = m2(**params)
