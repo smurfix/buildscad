@@ -18,11 +18,11 @@ except NameError:
 
 def tc(i):
     a,b = testcase(i)
-    show_object(a,f"OpenSCAD {i}")
-    show_object(b,f"Reference {i}")
+    show_object(a.wrapped,f"translated {i}")
+    show_object(b.wrapped,f"Python {i}")
 
 
-tc(1)
+tc(4)
 
 if False:
     pr("Cyl","""
