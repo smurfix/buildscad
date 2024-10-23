@@ -331,7 +331,6 @@ class Env:
     def difference(self):  # noqa:D102
         ch = self._children(as_list=True)
 
-        print(ch)
         if not ch:
             return None
         if len(ch) == 1:
@@ -436,7 +435,6 @@ class Env:
         else:
             p_ext = [tuple(points[x]) for x in paths[0]]
             p_int = [[tuple(points[x]) for x in xx] for xx in paths[1:]]
-        print(p_ext, p_int)
 
         def PL(pts):
             res = Polyline(pts, close=True)
