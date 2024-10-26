@@ -72,7 +72,8 @@ def testcase(i):
                     assert res, "No Python results. Did you assign them to something?"
                     m2 = res
                 else:
-                    m2 = m2(**params)
+                    if m2 is not None:
+                        m2 = m2(**params)
                 result.add("python",m2)
 
     scadf = f"tests/models/{i :03d}.scad"
@@ -81,16 +82,10 @@ def testcase(i):
         m1 = env1["result"]
         result.add("parser", m1)
     else:
-        try:
-            m1 = env1["work"]
-        except KeyError:
-            # Oh well. Gather toplevel elements instead.
-            from openscadq.eval import Eval
-
-            ev = Eval(env1)
-            m1 = ev.union(env1["_e_children"])
+        if "work" in env1.static.mods:
+            m1 = env1.mod("work", **params)
         else:
-            m1 = m1(**params)
+            m1 = env1.build()
         result.add("parser", m1)
 
  
@@ -106,6 +101,5 @@ def testcase(i):
                     res += m
 
             result.add("openscad",res)
-
 
     return result

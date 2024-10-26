@@ -1,3 +1,5 @@
+result=result();
+
 function result() = a+b-c/d;
 
 a=10;

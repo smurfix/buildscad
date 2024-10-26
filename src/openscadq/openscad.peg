@@ -76,7 +76,7 @@ mod_inst_bang = '!' module_instantiation
 mod_inst_hash = '#' module_instantiation
 mod_inst_perc = '%' module_instantiation
 mod_inst_star = '*' module_instantiation
-mod_inst_child = fn_call child_statement
+mod_inst_child = mod_call child_statement
 
 ifelse_statement = if_statement ( ELSE child_statement )?
 
@@ -91,7 +91,7 @@ explicit_child = '{' child_statements '}'
 // "for", "let" and "each" are valid module identifiers
 module_id = Symbol // | FOR | LET | ASSERT | ECHO | EACH
 
-fn_call = module_id '(' arguments ')'
+mod_call = module_id '(' arguments ')'
 
 expr = expr_fn | expr_let | expr_echo | expr_case
 expr_fn = FUNCTION '(' parameters ')' expr
