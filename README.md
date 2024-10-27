@@ -92,10 +92,17 @@ does emit "ECHO: undef".
 Updating a variable will emit a warning but not change the value.
 
 
-### included files
+### Included Files
 
 Variables declared in include files can be overridden in the main code, as in OpenSCAD.
 However, values from included files don't filter back to the main code.
+
+### Invalid Values
+
+OpenSCAD tends to return `undef` whenever it doesn't understand something,
+which typically results in any numer of follow-up warnings.
+
+We don't do that. Errors raise exceptions.
 
 ## Testing
 
