@@ -40,6 +40,7 @@ _null = NullEnv()
 
 class _Env(NullEnv):
     def __init__(self, parent:StaticEnv|DynEnv|NullEnv = _null):
+        assert isinstance(parent,NullEnv), parent
         self.parent = parent
 
         # Variables, functions and modules have each their own name space
@@ -211,10 +212,6 @@ class DynEnv(_Eval, NullEnv):
     def __init__(self, static:StaticEnv, dyn: DynEnv|NullEnv = _null, with_vars=False):
         """
         """
-        if not isinstance(dyn,DynEnv) and dyn is not _null:
-            breakpoint()
-        if not isinstance(static,StaticEnv):
-            breakpoint()
         assert isinstance(static,StaticEnv)
         assert isinstance(dyn,DynEnv) or dyn is _null, dyn
         self.static = static
