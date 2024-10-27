@@ -24,7 +24,8 @@ class _MainEnv(StaticEnv):
                 if not callable(v):
                     continue
                 setattr(v,"_env_", True)
-                self.mods
+                if k[-1] == "_":
+                    k=k[:-1]
                 d[k] = v
         collect(_Mods, self.mods)
         collect(_Fns, self.funcs)

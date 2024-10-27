@@ -67,7 +67,6 @@ class _StaticRules(_CommonRules):
         arity(n, 1)
         stmt = self.eval(n[0])
         if stmt is None:
-            breakpoint()
             stmt = self.eval(n[0])
             raise RuntimeError("Empty statement")
         self.work.append(stmt)
@@ -156,16 +155,36 @@ class _StaticRules(_CommonRules):
         assert len(n[1]) == 1
         if n[1][0].rule_name == "no_child":
             return Statement(self, n[0])
-        elif n[1][0].rule_name == "explicit_child":
+
+        return self._child_mod(n)
+
+    def _e_mod_inst_special(self, n):
+        # for(…) { … }
+        arity(n, 2)
+        if n[1][0].rule_name == "no_child":
+            raise ArityError(n, 2)
+
+        # We need to add an interim "static" environment for our variables.
+        env = SpecialEnv(self)
+
+        return env._child_mod(n)
+
+    def _child_mod(self, n:Node):
+        assert n[1].rule_name == "child_statement"
+        assert len(n[1]) == 1
+
+        # These dances are necessary to ensure that the actual child
+        # environment isn't wrapped, which would prevent access to
+        # the individual parts.
+        if n[1][0].rule_name == "explicit_child":
             child = self._encap_list(n[1][0][1])
             if not child.work:
                 return Statement(self, n[0])
         else:
             assert n[1][0].rule_name == "module_instantiation"
-            child = StaticEnv(self)
+            child = StaticEnv(env)
             child.work.append(child.eval(n[1][0]))
-
-        return ParentStatement(self, n[0], child)
+        return ParentStatement(env, n[0], child)
 
     def _e_mod_inst_bang(self, n):
         "!foo: isolated"
@@ -231,6 +250,7 @@ class _DynRules(_CommonRules):
         else:
             a, k = self.eval(n[2])
         return self.mod(name, *a, **k)
+    _e_special_call = _e_mod_call
 
     def _e_arguments(self, n):
         arity(n, 1, 2)
@@ -720,4 +740,5 @@ class XXX_Eval:
 # annoying recursive imports
 
 from .blocks import Function,Module,Variable,Statement,ParentStatement
-from .env import StaticEnv
+from .env import StaticEnv, SpecialEnv
+from .globals import ForStep

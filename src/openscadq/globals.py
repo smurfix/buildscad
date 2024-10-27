@@ -242,46 +242,45 @@ class _Mods(DynEnv):
             res = Pos(x / 2, y / 2, z / 2) * res
         return res
 
-    def for_(self, _intersect=False, **var):
+    def for_(self, _intersect=False, **vars):
 
-        if len(var) != 1:
-            if len(var):
-                raise ValueError("'for' called without variables")
-            else:
-                raise ValueError(
-                    f"'for' called with more than one variable ({','.join(var.keys())})",
-                )
-        var, stepper = next(iter(var.items()))
+        if not len(vars):
+            raise ValueError("'for' called without variables")
 
+        ch = self.child
         res = None
-        e = Env(self)
-        ch = self.work
+        xenv = DynEnv(ch, self)
+        venv = ch.parent
 
-        for val in (
-            stepper
-            if isinstance(stepper, (list, tuple))
-            else range(
-                self.eval(node=stepper.start),
-                self.eval(node=stepper.end),
-                stepper.step
-                if isinstance(stepper.step, (int, float))
-                else self.eval(node=stepper.step),
-            )
-        ):
-            e.set(var, val)
+        def _for(**vs):
+            nonlocal res
 
-            r = self.eval(node=ch, env=e)
-
-            if r is None:
-                continue
-
-            elif res is None:
-                res = r
-            elif _intersect:
-                res &= r
+            if vs:
+                var, stepper = vs.popitem()
+                stp= stepper.step if isinstance(stepper.step, (int, float)) else self.eval(node=stepper.step)
+                for val in (
+                    stepper
+                    if isinstance(stepper, (list, tuple))
+                    else range(
+                        self.eval(node=stepper.start),
+                        self.eval(node=stepper.end)+stp,
+                        stp,
+                    )
+                ):
+                    venv.set_var(var, val)
+                    _for(**vs)
             else:
-                res += r
+                r = xenv.build_one(ch)
+                if r is None:
+                    return
+                elif res is None:
+                    res = r
+                elif _intersect:
+                    res &= r
+                else:
+                    res += r
 
+        _for(**vars)
         return res
 
     def intersection_for_(self, **var):

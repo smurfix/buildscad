@@ -80,7 +80,7 @@ class Statement(Evalable):
         self.env = StaticEnv(env)
         self.body = body
 
-    def build_with(self, env:DynEnv):
+    def build_with(self, env:DynEnv, with_vars=None):
         e = DynEnv(env.static,env, with_vars=True)
         return e.eval(self.body)
         # return DynEnv(self.env,env).eval(self.body)
@@ -92,7 +92,7 @@ class ParentStatement(Statement):
         super().__init__(env, body)
         self.child = child
 
-    def build_with(self, env:DynEnv):
+    def build_with(self, env:DynEnv, with_vars=None):
         e = DynEnv(env.static,env, with_vars=True)
         e.child = self.child
         return e.eval(self.body)

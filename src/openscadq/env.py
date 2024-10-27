@@ -161,6 +161,21 @@ class StaticEnv(_Eval, _Env):
     def child(self):
         raise NotImplementedError
 
+
+class SpecialEnv(StaticEnv):
+    """.
+    Static environment, collects code blocks.
+    """
+    def __new__(cls, *a, **kw):
+        # Workaround for recursive imports
+        class SpecialEnv_(cls, _StaticRules, Evalable):
+            pass
+        return object.__new__(SpecialEnv_)
+
+    def set_var(self, name, value):
+        self.vars[name] = value
+    
+
 class DynEnv(_Eval):
     """
     Dynamic environment, for evaluation.
@@ -201,7 +216,6 @@ class DynEnv(_Eval):
         self._child_res = _unknown
 
     def __getitem__(self, k):
-
         return self.var(k)
 
     def __setitem__(self, k:str, v):
@@ -272,7 +286,6 @@ class DynEnv(_Eval):
                 r = node.build_with(self)
                 self._child_res[i] = r
             yield r
-
 
     def var(self, name:str):
         """Eval a variable"""
@@ -348,21 +361,24 @@ class DynEnv(_Eval):
         with self:
             return fn(*a, **kw)
 
+    def build_one(self, b):
+        if isinstance(b, Shape):
+            return b
+        elif hasattr(b,"build_with"):
+            return b.build_with(self)
+        elif hasattr(b,"_env_"):
+            return b(env)
+        elif callable(b):
+            with self:
+                return b()
+        else:
+            raise ValueError(f"Work list contains {b !r}", b)
+
     def build(self):
         """Helper to combine to-be-evaluated things"""
         res = None
         for b in self.static.work:
-            if isinstance(b, Shape):
-                r = b
-            elif hasattr(b,"build_with"):
-                r = b.build_with(self)
-            elif hasattr(b,"_env_"):
-                r = b(env)
-            elif callable(b):
-                with self:
-                    r = b()
-            else:
-                raise ValueError(f"Work list contains {b !r}", b)
+            r = self.build_one(b)
 
             if r is None:
                 continue
