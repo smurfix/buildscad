@@ -56,7 +56,7 @@ def testcase(i, may_skip=False):
             with suppress(KeyError):
                 result.volume = env2["volume"]
             with suppress(KeyError):
-                result.trace = env2["trace"]
+                result.trace = env2["tracing"]
             with suppress(KeyError):
                 result.tolerance = env2["tolerance"]
             with suppress(KeyError):

@@ -161,7 +161,7 @@ visually.
 
 ### Test Traces
 
-If the testcase sets ``trace=True``, the actual `build123d` calls will be
+If the testcase sets ``tracing=True``, the actual `build123d` calls will be
 logged and the STL file from OpenSCAD will not be deleted.
 
 This is mainly useful for generating a test case for bug reports that
