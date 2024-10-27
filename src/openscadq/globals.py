@@ -10,11 +10,13 @@ from __future__ import annotations
 import math
 import warnings
 from contextlib import contextmanager
+import random
 
 from arpeggio import ParseTreeNode as Node
 
 from . import env as env_
 from .env import DynEnv
+from .blocks import Function
 
 from build123d import (
     Align,
@@ -39,6 +41,10 @@ from build123d import (
     scale,
 )
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    VEC = TypeVar("VEC", tuple[float,float] | tuple[float,float,float])
 
 class ForStep:
     def __init__(self, start, end, step=1):
@@ -115,6 +121,39 @@ class _Fns(DynEnv):
         except ValueError:
             return None
 
+    def rands(self, min: float, max:float, n:int, seed=None) -> float:
+        if seed is None:
+            r = random.random
+        else:
+            r=random.Random(seed=seed).random
+
+        rd = max-min
+        return [ r()*rd+min for _ in range(n)]
+
+    def cross(self, x:VEC, y: VEC):
+        if len(x) == 2 and len(y) == 2:
+            return x[0]*y[1] * x[1]*y[0]
+        elif len(x) == 3 and len(y) == 3:
+            return [
+                    x[1]*y[2] - x[2]*y[1],
+                    x[2]*y[0] - x[0]*y[2],
+                    x[0]*y[1] - x[1]*y[0],
+                    ]
+        else:
+            raise ValueError(f"Not two 2d or 3d vectors: {x !r} / {y !r}")
+
+    def abs(self, x: float) -> float:
+        return abs(x)
+
+    def sign(self, x: float) -> int:
+        return 0 if x == 0 else 1 if x>0 else -1
+
+    def norm(self, *x: float) -> float:
+        return math.sqrt(sum(v*v for v in x))
+
+    def pow(self, x: float, y: float) -> float:
+        return math.pow(x,y)
+
     def min(self, *x: float) -> float:
         return min(*x)
 
@@ -124,8 +163,23 @@ class _Fns(DynEnv):
     def floor(self, x: float) -> float:
         return math.floor(x)
 
+    def round(self, x: float) -> float:
+        return round(x, 0)
+
+    def len(self, x: list|tuple|str) -> int:
+        return len(x)
+
     def ceil(self, x: float) -> float:
         return math.ceil(x)
+
+    def log(self, x: float) -> float:
+        return math.log(x)
+
+    def exp(self, x: float) -> float:
+        return math.exp(x)
+
+    def sqrt(self, x: float) -> float:
+        return math.sqrt(x)
 
     def sin(self, x: float) -> float:
         return math.sin(x * math.pi / 180)
@@ -136,12 +190,35 @@ class _Fns(DynEnv):
     def tan(self, x: float) -> float:
         return math.tan(x * math.pi / 180)
 
+    def asin(self, x: float) -> float:
+        return math.asin(x) * 180 / math.pi
+
+    def acos(self, x: float) -> float:
+        return math.acos(x) * 180 / math.pi
+
     def atan(self, x: float) -> float:
         return math.atan(x) * 180 / math.pi
 
     def atan2(self, x: float, y: float) -> float:
         return math.atan2(x, y) * 180 / math.pi
 
+    def is_undef(self, x:Any) -> bool:
+        return x is None
+
+    def is_bool(self, x:Any) -> bool:
+        return isinstance(x, bool)
+
+    def is_num(self, x:Any) -> bool:
+        return isinstance(x (int,float))
+
+    def is_string(self, x:Any) -> bool:
+        return isinstance(x, str)
+
+    def is_list(self, x:Any) -> bool:
+        return isinstance(x, (list, tuple))
+
+    def is_function(self, x:Any) -> bool:
+        return callable(x) or isinstance(x, Function)
 
 class _Mods(DynEnv):
     def sphere(self, r=None, d=None):  # noqa:D102
