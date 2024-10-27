@@ -12,7 +12,6 @@ classifiers = [
 dependencies = [
 	"build123d",
 	"click",
-	"scipy",
 	"simple-eval",
 	]
 dynamic = [ "version",]

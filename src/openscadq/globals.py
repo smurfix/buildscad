@@ -342,18 +342,9 @@ class _Mods(DynEnv):
         if ch is None:
             return None
         if v is not None and v != [0, 0, 0]:
-            if v == [1,0,0]:
-                return ch.rotate(Axis.X,a)
-            if v == [0,1,0]:
-                return ch.rotate(Axis.Y,a)
-            if v == [0,0,1]:
-                return ch.rotate(Axis.Z,a)
+            axis = Axis((0,0,0),tuple(v))
+            return ch.rotate(axis, a)
 
-            # now things get difficult
-            from scipy.spatial.transform import Rotation
-            vl = math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
-            r = Rotation.from_rotvec(tuple(x/vl*a for x in v), degrees=True)
-            a = r.as_euler("xyz", degrees=True)
         elif isinstance(a, (float, int)):
             return ch.rotate(Axis.Z, a)
 
