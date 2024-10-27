@@ -41,11 +41,14 @@ def _test(i):
         return
 
     v = [(x.volume,n) for x,n in res.models]
-    mods = iter(res.models)
-    msum = next(mods)[0]
-    for m,n in mods:
-        msum += m
-    msum = msum.volume
+    if res.no_add:
+        msum = None
+    else:
+        mods = iter(res.models)
+        msum = next(mods)[0]
+        for m,n in mods:
+            msum += m
+        msum = msum.volume
 
     try:
         vn = res.volume
@@ -53,10 +56,12 @@ def _test(i):
         vn,vname = v.pop()
     else:
         vname = "preset"
-    assert abs(msum - vn) < res.tolerance, (msum,vname,vn)
+    if msum is not None:
+        assert abs(msum - vn) < res.tolerance, (msum,vname,vn)
     for vv,vvn in v:
         assert abs(vn - vv) < res.tolerance, (vname,vn, vvn,vv)
-        assert abs(msum - vv) < res.tolerance, (msum, vvn,vv)
+        if msum is not None:
+            assert abs(msum - vv) < res.tolerance, (msum, vvn,vv)
 
 _i = 0
 _missing = 0

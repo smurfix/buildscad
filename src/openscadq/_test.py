@@ -12,6 +12,7 @@ from build123d import Mesher, Shape
 class Res:
     tolerance = 0.001
     numeric = False
+    no_add=False
 
     def __init__(self):
         self._models = {}
@@ -55,6 +56,8 @@ def testcase(i, may_skip=False):
                 result.volume = env2["volume"]
             with suppress(KeyError):
                 result.tolerance = env2["tolerance"]
+            with suppress(KeyError):
+                result.no_add = env2["no_add"]
             with suppress(KeyError):
                 params = env2["params"]
             with suppress(KeyError):

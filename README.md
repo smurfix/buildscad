@@ -130,15 +130,31 @@ The following special constants are recognized:
 
   The volume (in mm³) that the model is supposed to have.
 
-If the Python part only contains constants, it must declare an empty
-``work`` function. Otherwise the test code assumes that you wrote e.g.
-``Sphere(42)`` without actually assigning the result to anything,
-and thus refuses to accept the testcase.
+* skip
+
+  Skip this test when auto-running.
+
+* no\_add
+
+  When set to `True`, do not add the various volumes. This is a workaround
+  for an OCC bug which causes an endless loop.
+
+  Setting this flag causes this testcase to only compare volumes and bounding
+  boxes, which is not as accurate.
+
+If the Python part only contains constants, it must declare `work=None`.
+Otherwise the test code assumes that you wrote e.g. ``Sphere(42)`` without
+assigning the result to anything, and thus refuses to accept the testcase.
+
+If you want to test a functional result against OpenSCAD, the best way is
+to create a `Box(result,1,1)` object.
+
 
 ### Viewing tests
 
-``examples/test_viewer.py`` can be used in GQ-Editor to compare models
+``examples/test_viewer.py`` can be opened with CQ-Editor to compare models
 visually.
+
 
 ## TODO
 
