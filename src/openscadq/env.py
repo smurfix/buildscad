@@ -172,8 +172,17 @@ class SpecialEnv(StaticEnv):
             pass
         return object.__new__(SpecialEnv_)
 
-    def set_var(self, name, value):
+    def set_var(self, name: str, value: Any) -> None:
+        """Override a variable"""
         self.vars[name] = value
+    
+    def set_func(self, name: str, value: Callable) -> None:
+        """Override a function"""
+        self.funcs[name] = value
+    
+    def set_mod(self, name: str, value: Callable) -> None:
+        """Override a module"""
+        self.mods[name] = value
     
 
 class DynEnv(_Eval):

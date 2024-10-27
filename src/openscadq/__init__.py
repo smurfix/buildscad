@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import contextvars as _ctx
 
-__all__ = ["env", "parse"]
+__all__ = ["env", "parse", "process", "Assertion"]
 
 env = _ctx.ContextVar("env")
 
 del _ctx
 
+class Assertion(AssertionError):
+    """The interpreted code called a failing ``assert`` function."""
+    pass
 
-def parse(*a, **kw):
-    global parse
-    from .main import parse
+from .main import parse, process
 
-    return parse(*a, **kw)

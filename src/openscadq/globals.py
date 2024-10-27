@@ -14,7 +14,7 @@ import random
 
 from arpeggio import ParseTreeNode as Node
 
-from . import env as env_
+from . import env as env_, Assertion
 from .env import DynEnv
 from .blocks import Function
 
@@ -102,6 +102,12 @@ class _Fns(DynEnv):
             a = a + (DE(),)
         print("ECHO:", ", ".join(repr(x) for x in a))
 
+    def assert_(self, chk, msg=None):
+        if chk:
+            return
+        if msg is None:
+            msg = "Assertion failed"
+        raise Assertion(msg)
 
     def str(self, *x):
         return "".join(str(y) for y in x)
