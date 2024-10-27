@@ -9,10 +9,10 @@ elif Path("../tests/models").exists():
 else:
     raise RuntimeError("Tests not found")
 
-if "/src/openscadq/src" not in sys.path:
-    sys.path.insert(0,"/src/openscadq/src")
-if "/src/openscadq" not in sys.path:
-    sys.path.insert(0,"/src/openscadq")
+if "./src" not in sys.path:
+    sys.path.insert(0,"./src")
+if "." not in sys.path:
+    sys.path.insert(0,".")
 
 import openscadq.main as scq
 from openscadq._test import testcase
@@ -30,7 +30,7 @@ def tc(i):
         show_object(v.wrapped,f"{k} {i}")
 
 
-tc(4)
+tc(10)
 
 if False:
     pr("Cyl","""
