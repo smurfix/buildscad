@@ -169,7 +169,7 @@ def parse(f: Path | str, /) -> MainEnv:
     return env
 
 
-def process(f, /, *fn, **kw):
+def process(f, /, preload=(), **kw):
     """process an OpenSCAD file.
 
     Returns a build123d object with the result.
@@ -181,10 +181,11 @@ def process(f, /, *fn, **kw):
     Keyword arguments can be used to override variables, function,s or
     modules.
     """
-    env = parse(*a, **kw)
+    env = parse(f)
     for fn in preload:
         with open(fn) as fd:
             fc = fd.read()
+        d={}
         exec(fc, d)
 
         # TODO 
@@ -192,10 +193,10 @@ def process(f, /, *fn, **kw):
             if n[0] == "_":
                 continue
             if callable(f):
-                env.set_func(n,f)
-                env.set_mod(n,f)
+                env.static.set_func(n,f)
+                env.static.set_mod(n,f)
             else:
-                env.set_var(n,f)
+                env.static.set_var(n,f)
 
     for k, v in kw.items():
         if callable(v):
@@ -204,4 +205,4 @@ def process(f, /, *fn, **kw):
         else:
             env.set_var(k,v)
 
-    return env.union()
+    return env.build()
