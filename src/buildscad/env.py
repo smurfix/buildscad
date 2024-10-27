@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from contextvars import Token
 
-from . import env, main_env
+from . import cur_env, main_env
 from build123d import Shape
 
 class _working:
@@ -407,18 +407,18 @@ class DynEnv(_Eval, NullEnv):
 
     def __enter__(self):
         if self._token is not None:
-            if env.get() is not self:
+            if cur_env.get() is not self:
                 raise RuntimeError("recursive call")
             self._recurse += 1
             return self
-        self._token = env.set(self)
+        self._token = cur_env.set(self)
         return self
 
     def __exit__(self, *tb):
         if self._recurse:
             self._recurse -= 1
         else:
-            env.reset(self._token)
+            cur_env.reset(self._token)
             self._token = None
 
 # annoying recursive imports

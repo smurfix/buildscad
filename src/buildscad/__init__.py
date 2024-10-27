@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import contextvars as _ctx
 
-__all__ = ["env", "parse", "process", "Assertion"]
+__all__ = ["cur_env", "main_env", "parse", "process", "Assertion"]
 
-env = _ctx.ContextVar("env")
+cur_env = _ctx.ContextVar("cur_env")
 main_env = _ctx.ContextVar("main_env")
 
 del _ctx
