@@ -134,7 +134,7 @@ class Env(DynEnv):
             rs += f"{vn(obj)}."
         rt = (vn(x) for x in a)
         if kw:
-            rt = chain(rt, (f"{k}={vn(v)}" for k,v in kw.items))
+            rt = chain(rt, (f"{k}={vn(v)}" for k,v in kw.items()))
         print(f"{rs}{op}({', '.join(rt)})")
 
 

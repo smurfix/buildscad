@@ -248,7 +248,7 @@ class _Mods(DynEnv):
         res = Box(x, y, z)
         self.trace(res,"Box",x,y,z)
         if not center:
-            res = Pos(x / 2, y / 2, z / 2) * res
+            res2 = Pos(x / 2, y / 2, z / 2) * res
             self.trace(res2,"Pos", x / 2, y / 2, z / 2, _mul=res)
             res = res2
         return res
