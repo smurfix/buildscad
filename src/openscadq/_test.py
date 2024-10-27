@@ -30,7 +30,7 @@ class Res:
     def __len__(self):
         return len(self._models)
 
-def testcase(i):
+def testcase(i, may_skip=False):
     import tests.env_openscad as _env
     result = Res()
     params = {}
@@ -47,6 +47,10 @@ def testcase(i):
             result.add("python",env2["result"]())
             result.numeric = True
         else:
+            with suppress(KeyError):
+                if env2["skip"]:
+                    import pytest
+                    pytest.skip("'skip' is set")
             with suppress(KeyError):
                 result.volume = env2["volume"]
             with suppress(KeyError):
