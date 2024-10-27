@@ -83,7 +83,7 @@ class _StaticRules(_CommonRules):
         else:
             params = ((), {})
         body = n[-2]
-        self.funcs[name] = Function(self, name, params, body)
+        self.add_func(name, params, body)
 
     def _e_stmt_decl_mod(self, n):
         arity(n, 5, 6)
@@ -107,7 +107,7 @@ class _StaticRules(_CommonRules):
         else:
             body = StaticEnv(self)
             body.eval(nn)
-        self.mods[name] = Module(name, params, body)
+        self.add_mod(name, params, body)
 
     def _e_explicit_child(self, n):
         # foo() { … }
@@ -182,9 +182,9 @@ class _StaticRules(_CommonRules):
                 return Statement(self, n[0])
         else:
             assert n[1][0].rule_name == "module_instantiation"
-            child = StaticEnv(env)
+            child = StaticEnv(self)
             child.work.append(child.eval(n[1][0]))
-        return ParentStatement(env, n[0], child)
+        return ParentStatement(self, n[0], child)
 
     def _e_mod_inst_bang(self, n):
         "!foo: isolated"
@@ -267,7 +267,7 @@ class _DynRules(_CommonRules):
             elif v[0] in k:
                 raise ValueError("already set", n[off])
             elif v[0].startswith("$"):
-                e.set_cc(v[0], v[1])
+                self[v[0]] = v[1]
             else:
                 k[v[0]] = v[1]
             off += 2
@@ -516,7 +516,7 @@ class _DynRules(_CommonRules):
             return lambda x: x()
         arity(n, 3)
         a, k = self.eval(n[1])
-        return lambda x: x(*a, **k)
+        return a,k
 
     def _e_add_index(self, n):
         if len(n) == 2:

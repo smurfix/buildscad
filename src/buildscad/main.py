@@ -19,9 +19,15 @@ from build123d import Shape, Axis
 class _MainEnv(SpecialEnv):
     "main environment with global variables"
 
+    # We stack environments.
+    # Main redirects everything that the parser adds to its first parent.
+    # The second, toplevel parent contains the built-in globals.
+    # This way overrides end up in different environments and thus
+    # don't generate warnings when added.
+
     def __init__(self):
         env = StaticEnv()
-        super().__init__(env)
+        super().__init__(StaticEnv(env))
 
         def collect(cls, d:dict[str,Callable]):
             for k in dir(cls):
@@ -51,7 +57,7 @@ class _MainEnv(SpecialEnv):
 
 class Env(DynEnv):
     def __init__(self):
-        super().__init__(StaticEnv(_MainEnv()))
+        super().__init__(_MainEnv())
         self.vars["$fn"] = 999
         self.vars["$fa"] = 0.001
         self.vars["$fs"] = 0.001

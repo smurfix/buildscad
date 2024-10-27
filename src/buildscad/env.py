@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from contextvars import Token
+import warnings
 
 from . import cur_env, main_env
 from build123d import Shape
@@ -91,7 +92,7 @@ class _Env(NullEnv):
             self.mods[name] = mod
 
     def add_mod(self, name:str, params: Node, body:Node):
-        self.add_mod_(name, Module(self, name, params, body))
+        self.add_mod_(name, Module(name, params, body))
 
 
 class _Eval:
@@ -360,7 +361,7 @@ class DynEnv(_Eval, NullEnv):
         if hasattr(fn,"eval_args"):
             return fn.eval_args(self, a, kw)
         if hasattr(fn, "_env_"):
-            return fn(self, a, kw)
+            return fn(self, *a, **kw)
         # "foreign" function
         with self:
             return fn(*a, **kw)
