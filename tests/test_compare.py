@@ -4,14 +4,12 @@ import os
 from functools import partial
 from pathlib import Path
 
-from openscadq import parse
-from openscadq._test import testcase as runner
+from buildscad import parse
+from buildscad._test import testcase as runner
 # can't be named "test*" or pytest tries to run it directly
 
 
 def _test(i):
-    import tests.env_openscad as _env
-
     res = runner(i, may_skip=True)
 
     # Compare the two. They must be (a) same size,

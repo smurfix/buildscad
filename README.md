@@ -36,7 +36,7 @@ To use this feature, simply add a function with the desired name to the
 environment you pass to ``process``, or pre-load a Python file.
 
 In order to read global variables, functions may access the current
-environment via the contextvar ``openscadq.env``.
+environment via the contextvar ``buildscad.env``.
 
 ## Limitations
 
@@ -116,7 +116,7 @@ The models in these files are built in three ways:
 * by Python code
 
 The test builder calls the ``work`` function (Python) / module (OpenSCAD).
-If that doesn't exist, top-level objects (OpenScad) / variables (Python) are used.
+If that doesn't exist, top-level objects (OpenSCAD) / variables (Python) are used.
 
 The following special constants are recognized:
 

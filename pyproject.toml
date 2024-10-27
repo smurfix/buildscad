@@ -15,24 +15,24 @@ dependencies = [
 	"simple-eval",
 	]
 dynamic = [ "version",]
-keywords = [ "openscad", "cadquery", "build123d"]
+keywords = [ "buildscad", "cadquery", "build123d"]
 requires-python = ">=3.10"
-name = "opensCadQ"
-description = "An interpreter for OpenSCAD that renders to Build123d objects"
+name = "buildscad"
+description = "An interpreter for OpenSCAD that renders to build123d objects"
 readme = "README.md"
 [[project.authors]]
 email = "matthias@urlichs.de"
 name = "Matthias Urlichs"
 
 [project.scripts]
-scad2cq = "openscadq.__main__:main"
+scad2cq = "buildscad.__main__:main"
 
 [project.license]
 file = "LICENSE.txt"
 
 [project.urls]
-homepage = "https://github.org/smurfix/openscadq"
-repository = "https://github.com/smurfix/openscadq.git"
+homepage = "https://github.org/smurfix/buildscad"
+repository = "https://github.com/smurfix/buildscad.git"
 
 [tool.flake8]
 max-line-length = 99

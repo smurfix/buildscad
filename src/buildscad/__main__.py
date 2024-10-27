@@ -1,5 +1,5 @@
 """
-Command-line interpreter for openscadq
+Command-line interpreter for buildscad
 """
 from __future__ import annotations
 

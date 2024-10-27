@@ -6,7 +6,7 @@ import io
 from tempfile import NamedTemporaryFile
 from contextlib import suppress, nullcontext
 
-from openscadq import parse
+from buildscad import parse
 from build123d import Mesher, Shape
 
 class Res:
@@ -33,7 +33,7 @@ class Res:
         return len(self._models)
 
 def testcase(i, may_skip=False):
-    import tests.env_openscad as _env
+    import tests.env_build123d as _env
     result = Res()
     params = {}
     run=True

@@ -14,8 +14,8 @@ if "./src" not in sys.path:
 if "." not in sys.path:
     sys.path.insert(0,".")
 
-import openscadq.main as scq
-from openscadq._test import testcase
+import buildscad.main as scq
+from buildscad._test import testcase
 # from build123d import *
 
 try:

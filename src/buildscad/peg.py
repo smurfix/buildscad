@@ -4,7 +4,7 @@ PEG parser
 This file specifies the Arpeggio parser which parses the "openscad.peg"
 grammar specification for OpenSCAD's syntax.
 """
-# Name: openscadq/peg.py
+# Name: buildscad/peg.py
 # Purpose: This module is a variation of the original peg.py.
 #   The syntax is slightly changed to be more readable.
 # Copyright: (c) 2024 Matthias Urlichs <matthias@urlichs.de>

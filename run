@@ -2,8 +2,8 @@
 
 import sys
 import os
-if os.path.exists("src/openscadq"):
+if os.path.exists("src/buildscad"):
     sys.path.insert(0, "./src")
 
-from openscadq.__main__ import main
+from buildscad.__main__ import main
 main()

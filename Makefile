@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-PACKAGE = openscadq
+PACKAGE = buildscad
 PYPI ?= $(PACKAGE)
 
 PATH := /usr/share/sphinx/scripts/python3:${PATH}
