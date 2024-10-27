@@ -236,13 +236,37 @@ class _StaticRules(_CommonRules):
             arity(n, 3)
             return (
                 n[0].value,
-                self.eval(n[2]),
+                n[2],
             )
     def _e_EOF(self, n):
         pass
 
+    def _e_ifelse_statement(self, n):
+        n = n[0]
+        arity(n, 5, 7)
+        e = StaticEnv(self)
+        e.test = n[2]
+        e.yes = StaticEnv(e)
+        e.yes.eval(n[4])
+        if len(n) > 5:
+            e.no = StaticEnv(e)
+            e.no.eval(n[6])
+        return e
+
+    def _e_if_statement(self, n):
+        breakpoint()
 
 class _DynRules(_CommonRules):
+    def _e_ifelse_statement(self, n):
+        breakpoint()
+
+    def _e_if_statement(self, n):
+        if self.eval(n[2]):
+            return self.static.yes.build_with(self)
+        if self.static.no is not None:
+            return self.static.no.build_with(self)
+        return None
+
     def _e_mod_call(self, n):
         name = n[0].value
         if len(n) == 3:
@@ -714,28 +738,6 @@ class XXX_Eval:
         # assert ln == len(self._children) if self._children else 0, (n,self._children)
         return res
 
-
-
-    def _e_EOF(self, n):
-        return None
-
-    def _e_child_statement(self, n):
-        arity(n, 1)
-        self._children.append(n[0])
-
-    def _e_child_statements(self, n):
-        return self._e__list(n)
-
-    def _e_ifelse_statement(self, n):
-        n = n[0]
-        arity(n, 5, 7)
-        res = self.eval(n[2])
-        if res:
-            return self.eval(n[4])
-        elif len(n) < 7:
-            return None
-        else:
-            return self.eval(n[6])
 
 # annoying recursive imports
 
