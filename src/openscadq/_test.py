@@ -48,7 +48,7 @@ def testcase(i, may_skip=False):
             result.numeric = True
         else:
             with suppress(KeyError):
-                if env2["skip"]:
+                if may_skip and env2["skip"]:
                     import pytest
                     pytest.skip("'skip' is set")
             with suppress(KeyError):
