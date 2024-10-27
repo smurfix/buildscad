@@ -253,9 +253,8 @@ class _Mods(DynEnv):
             res = res2
         return res
 
-    def for_(self, _intersect=False, **vars):
-
-        if not len(vars):
+    def for_(self, _intersect=False, **vars_):
+        if not len(vars_):
             raise ValueError("'for' called without variables")
 
         ch = self.child
@@ -268,16 +267,13 @@ class _Mods(DynEnv):
 
             if vs:
                 var, stepper = vs.popitem()
-                stp= stepper.step if isinstance(stepper.step, (int, float)) else self.eval(node=stepper.step)
-                for val in (
-                    stepper
-                    if isinstance(stepper, (list, tuple))
-                    else range(
+                if not isinstance(stepper,(list,tuple)):
+                    stp=stepper.step if isinstance(stepper.step, (int, float)) else self.eval(node=stepper.step)
+                    stepper = range(
                         self.eval(node=stepper.start),
                         self.eval(node=stepper.end)+stp,
-                        stp,
                     )
-                ):
+                for val in stepper:
                     venv.set_var(var, val)
                     _for(**vs)
             else:
@@ -295,7 +291,7 @@ class _Mods(DynEnv):
                     self.trace(r2, "_add",res,r)
                     res = r2
 
-        _for(**vars)
+        _for(**vars_)
         return res
 
     def intersection_for_(self, **var):
@@ -378,14 +374,16 @@ class _Mods(DynEnv):
             ch = ch2
         return ch
 
-    def difference(self) -> Shape:  # noqa:D102
+    def difference(self) -> Shape|None:  # noqa:D102
         ch = iter(self.children())
         res = next(ch)
-
-        for obj in ch:
-            r = res-obj
-            self.trace(r, "_diff",res,obj)
-            res = r
+        if res is not None:
+            for obj in ch:
+                if obj is None:
+                    continue
+                r = res-obj
+                self.trace(r, "_diff",res,obj)
+                res = r
         return res
 
     def union(self) -> Shape:  # noqa:D102
