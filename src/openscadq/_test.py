@@ -92,6 +92,9 @@ def testcase(i, may_skip=False):
             m1 = env1.build()
         result.add("parser", m1)
 
+        if "check" in env1.static.mods:
+            m1x = env1.mod("check", **params)
+            result.add("check", m1x)
  
     if run and not result.numeric:
         with NamedTemporaryFile(suffix=".stl") as tf,NamedTemporaryFile(suffix=".txt") as out:
