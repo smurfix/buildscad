@@ -190,7 +190,7 @@ def process(f, /, preload=(), **kw):
 
         # TODO 
         for n, f in d.items():
-            if n[0] == "_":
+            if n[0] == "_" and not isinstance(f,(int,float)):
                 continue
             if callable(f):
                 env.static.set_func(n,f)
