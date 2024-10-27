@@ -44,8 +44,8 @@ class _Env(NullEnv):
 
     def var(self, name: str):
         """returns the node that computes a variable"""
-        res = self.vars.get(name, None)
-        if res is not None:
+        res = self.vars.get(name, _null)
+        if res is not _null:
             return res
         return self.parent.var(name)
         
