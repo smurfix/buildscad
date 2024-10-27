@@ -12,9 +12,7 @@ classifiers = [
 dependencies = [
 	"build123d",
 	"click",
-	"numpy-stl",
 	"simple-eval",
-	"<cqmore>@git+https://github.com/JustinSDK/cqMore",
 	]
 dynamic = [ "version",]
 keywords = [ "openscad", "cadquery", "build123d"]
