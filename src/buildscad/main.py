@@ -57,8 +57,8 @@ class Env(DynEnv):
         self.vars["$fs"] = 0.001
         self.vars["$t"] = 0
         self.vars["$children"] = 0
-        self.vars["$preview"] = 0
-        self.vars["$trace"] = 0
+        self.vars["$preview"] = False
+        self.vars["$trace"] = False
         self._tcache = {}
         self._tnext = 1
 
