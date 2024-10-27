@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from subprocess import run as spawn, DEVNULL
 import io
+import sys
 from tempfile import NamedTemporaryFile
 from contextlib import suppress, nullcontext
 
@@ -104,7 +105,7 @@ def testcase(i, may_skip=False):
             result.add("check", m1x)
  
     if run and not result.numeric:
-        with NamedTemporaryFile(suffix=".stl", delete=not result.trace) as tf,NamedTemporaryFile(suffix=".txt") as out:
+        with NamedTemporaryFile(suffix=".stl", delete=not result.trace and "pytest" not in sys.modules) as tf,NamedTemporaryFile(suffix=".txt") as out:
             spawn(["openscad","--export-format=binstl", "-o",tf.name,scadf], check=True, stdin=DEVNULL, stdout=out, stderr=out, text=True)
             m3 = Mesher().read(tf.name)
             res = None
