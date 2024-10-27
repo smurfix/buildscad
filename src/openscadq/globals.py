@@ -236,7 +236,9 @@ class _Mods(DynEnv):
         elif d is not None:
             warnings.warn("sphere: parameters are ambiguous")
 
-        return Sphere(r)
+        res = Sphere(r)
+        self.trace(res,"Sphere",r)
+        return res
 
     def cube(self, size=1, center=False):  # noqa:D102
         if isinstance(size, (int, float)):
@@ -244,8 +246,11 @@ class _Mods(DynEnv):
         else:
             x, y, z = size
         res = Box(x, y, z)
+        self.trace(res,"Box",x,y,z)
         if not center:
             res = Pos(x / 2, y / 2, z / 2) * res
+            self.trace(res2,"Pos", x / 2, y / 2, z / 2, _mul=res)
+            res = res2
         return res
 
     def for_(self, _intersect=False, **vars):
@@ -282,9 +287,13 @@ class _Mods(DynEnv):
                 elif res is None:
                     res = r
                 elif _intersect:
-                    res &= r
+                    r2 = res & r
+                    self.trace(r2, "_inter",res,r)
+                    res = r2
                 else:
-                    res += r
+                    r2 = res + r
+                    self.trace(r2, "_add",res,r)
+                    res = r2
 
         _for(**vars)
         return res
@@ -335,7 +344,10 @@ class _Mods(DynEnv):
         ch = self.child_union()
         if ch is None:
             return None
-        return ch.translate(v)
+
+        res = ch.translate(v)
+        self.trace(res,"translate", v, _obj=ch)
+        return res
 
     def rotate(self, a=None, v=None) -> Shape:  # noqa:D102
         ch = self.child_union()
@@ -343,25 +355,37 @@ class _Mods(DynEnv):
             return None
         if v is not None and v != [0, 0, 0]:
             axis = Axis((0,0,0),tuple(v))
-            return ch.rotate(axis, a)
+            res = ch.rotate(axis, a)
+            self.trace(res,"rotate", axis, a, _obj=ch)
+            return res
 
         elif isinstance(a, (float, int)):
-            return ch.rotate(Axis.Z, a)
+            res = ch.rotate(Axis.Z, a)
+            self.trace(res,"rotate", Axis.Z, a, _obj=ch)
+            return res
 
         if a[0]:
-            ch = ch.rotate(Axis.X, a[0])
+            ch2 = ch.rotate(Axis.X, a[0])
+            self.trace(ch2,"rotate", Axis.X, a[0], _obj=ch)
+            ch = ch2
         if a[1]:
-            ch = ch.rotate(Axis.Y, a[1])
+            ch2 = ch.rotate(Axis.Y, a[1])
+            self.trace(ch2,"rotate", Axis.Y, a[1], _obj=ch)
+            ch = ch2
         if a[2]:
-            ch = ch.rotate(Axis.Z, a[2])
+            ch2 = ch.rotate(Axis.Z, a[2])
+            self.trace(ch2,"rotate", Axis.Z, a[2], _obj=ch)
+            ch = ch2
         return ch
 
     def difference(self) -> Shape:  # noqa:D102
         ch = iter(self.children())
         res = next(ch)
 
-        for c in ch:
-            res -= c
+        for obj in ch:
+            r = res-obj
+            self.trace(r, "_diff",res,obj)
+            res = r
         return res
 
     def union(self) -> Shape:  # noqa:D102
@@ -375,7 +399,9 @@ class _Mods(DynEnv):
             if res is None:
                 res = obj
             else:
-                res &= obj
+                r = res & obj
+                self.trace(r, "_inter",res,obj)
+                res = r
         return res.clean()
 
     def resolve(self, idx=None) -> Shape:

@@ -3,12 +3,18 @@ Main wrapper to process OpenSCAD files
 """
 from __future__ import annotations
 
+import sys
 from io import IOBase
 from pathlib import Path
+from contextlib import contextmanager, nullcontext
+from itertools import chain
 
 from .peg import Parser
 from .env import StaticEnv,DynEnv,SpecialEnv
 from .globals import _Fns,_Mods
+from . import main_env
+
+from build123d import Shape, Axis
 
 class _MainEnv(SpecialEnv):
     "main environment with global variables"
@@ -52,6 +58,9 @@ class Env(DynEnv):
         self.vars["$t"] = 0
         self.vars["$children"] = 0
         self.vars["$preview"] = 0
+        self.vars["$trace"] = 0
+        self._tcache = {}
+        self._tnext = 1
 
     def set_var(self, name, value):
         self.static.add_var(name, value)
@@ -69,6 +78,64 @@ class Env(DynEnv):
 
     def run(self):
         return self.union(self.static.work)
+
+    @contextmanager
+    def tracing(self, fn:Path|None=None):
+        token = main_env.set(self)
+        try:
+            self.vars["$trace"] = True
+            with nullcontext(sys.stdout) if fn is None else fn.open("w") as self._trace:
+                yield
+        finally:
+            main_env.reset(token)
+            self.vars["$trace"] = False
+            self._trace = None
+            self._tcache = {}
+
+    def trace_(self, a, kw):
+        def vn(obj):
+            if isinstance(obj,Axis):
+                if obj == Axis.X:
+                    return "Axis.X"
+                if obj == Axis.Y:
+                    return "Axis.Y"
+                if obj == Axis.Z:
+                    return "Axis.Z"
+                oid = id(obj)
+                if (tn := self._tcache.get(oid, None)) is None:
+                    tn,self._tnext = self._tnext, self._tnext+1
+                    self._tcache[oid] = tn,obj
+                    print(f"o_{tn} = Axis{obj !r}")
+                return f"o_{tn}"
+
+            if isinstance(obj,Shape):
+                oid = id(obj)
+                if (tn := self._tcache.get(oid, None)) is None:
+                    tn,self._tnext = self._tnext, self._tnext+1
+                    self._tcache[oid] = tn,obj
+                else:
+                    tn = tn[0]
+                return f"o_{tn}"
+            return repr(obj)
+
+        res,op,*a = a
+        rs = f"{vn(res)} = "
+        if op == "_add":
+            print(f"{rs}{' + '.join(vn(x) for x in a)}")
+            return
+        if op == "_inter":
+            print(f"{rs}{' & '.join(vn(x) for x in a)}")
+            return
+        if op == "_diff":
+            print(f"{rs}{' & '.join(vn(x) for x in a)}")
+            return
+        obj = kw.pop("_obj", None)
+        if obj is not None:
+            rs += f"{vn(obj)}."
+        rt = (vn(x) for x in a)
+        if kw:
+            rt = chain(rt, (f"{k}={vn(v)}" for k,v in kw.items))
+        print(f"{rs}{op}({', '.join(rt)})")
 
 
 def parse(f: Path | str, /) -> MainEnv:

@@ -142,6 +142,10 @@ The following special constants are recognized:
   Setting this flag causes this testcase to only compare volumes and bounding
   boxes, which is not as accurate.
 
+* trace
+
+  Log (some) calls to build123.
+
 If the Python part only contains constants, it must declare `work=None`.
 Otherwise the test code assumes that you wrote e.g. ``Sphere(42)`` without
 assigning the result to anything, and thus refuses to accept the testcase.
@@ -155,6 +159,15 @@ to create a `Box(result,1,1)` object.
 ``examples/test_viewer.py`` can be opened with CQ-Editor to compare models
 visually.
 
+### Test Traces
+
+If the testcase sets ``trace=True``, the actual `build123d` calls will be
+logged and the STL file from OpenSCAD will not be deleted.
+
+This is mainly useful for generating a test case for bug reports that
+doesn't depend on this code.
+
+Trace support is still somewhat incomplete.
 
 ## TODO
 

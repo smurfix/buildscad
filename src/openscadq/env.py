@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from contextvars import Token
 
-from . import env
+from . import env, main_env
 from build123d import Shape
 
 class _working:
@@ -29,6 +29,10 @@ class NullEnv:
         raise KeyError(name)
     def func(self, name):
         raise KeyError(name)
+
+    def trace(self, *a, **k):
+        if self["$trace"]:
+            main_env.get().trace_(a, k)
 
 _null = NullEnv()
 
@@ -185,7 +189,7 @@ class SpecialEnv(StaticEnv):
         self.mods[name] = value
     
 
-class DynEnv(_Eval):
+class DynEnv(_Eval, NullEnv):
     """
     Dynamic environment, for evaluation.
     """
@@ -270,7 +274,9 @@ class DynEnv(_Eval):
             if res is None:
                 res = r
             else:
-                res += r
+                r2 = res + r
+                self.trace(r2, "_add",res,r)
+                res = r2
         return res
 
     def children(self) -> Iterator[Shape|None]:
@@ -394,7 +400,9 @@ class DynEnv(_Eval):
             if res is None:
                 res = r
             else:
-                res += r
+                r2 = res + r
+                self.trace(r2, "_add",res,r)
+                res = r2
         return res
 
     def __enter__(self):

@@ -4,7 +4,7 @@ from pathlib import Path
 from subprocess import run as spawn, DEVNULL
 import io
 from tempfile import NamedTemporaryFile
-from contextlib import suppress
+from contextlib import suppress, nullcontext
 
 from openscadq import parse
 from build123d import Mesher, Shape
@@ -13,6 +13,7 @@ class Res:
     tolerance = 0.001
     numeric = False
     no_add=False
+    trace=False
 
     def __init__(self):
         self._models = {}
@@ -55,6 +56,8 @@ def testcase(i, may_skip=False):
             with suppress(KeyError):
                 result.volume = env2["volume"]
             with suppress(KeyError):
+                result.trace = env2["trace"]
+            with suppress(KeyError):
                 result.tolerance = env2["tolerance"]
             with suppress(KeyError):
                 result.no_add = env2["no_add"]
@@ -89,18 +92,19 @@ def testcase(i, may_skip=False):
         m1 = env1["result"]
         result.add("parser", m1)
     else:
-        if "work" in env1.static.mods:
-            m1 = env1.mod("work", **params)
-        else:
-            m1 = env1.build()
-        result.add("parser", m1)
+        with env1.tracing() if result.trace else nullcontext():
+            if "work" in env1.static.mods:
+                m1 = env1.mod("work", **params)
+            else:
+                m1 = env1.build()
+            result.add("parser", m1)
 
         if "check" in env1.static.mods:
             m1x = env1.mod("check", **params)
             result.add("check", m1x)
  
     if run and not result.numeric:
-        with NamedTemporaryFile(suffix=".stl") as tf,NamedTemporaryFile(suffix=".txt") as out:
+        with NamedTemporaryFile(suffix=".stl", delete=not result.trace) as tf,NamedTemporaryFile(suffix=".txt") as out:
             spawn(["openscad","--export-format=binstl", "-o",tf.name,scadf], check=True, stdin=DEVNULL, stdout=out, stderr=out, text=True)
             m3 = Mesher().read(tf.name)
             res = None
@@ -111,5 +115,7 @@ def testcase(i, may_skip=False):
                     res += m
 
             result.add("openscad",res)
+            if result.trace:
+                print(f"o_stl = Mesher().read({tf.name !r})")
 
     return result

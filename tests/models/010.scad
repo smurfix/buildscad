@@ -1,7 +1,7 @@
 $fn=30;
 
 // the original had 10:50, which takes ages
-for (i = [10:13])
+for (i = [10:11])
 {
     angle = i*360/20;
     distance = i*10;
