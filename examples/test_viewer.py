@@ -93,5 +93,5 @@ if False:
     """)
 
 if False:
-    res = scq.process("/d/src/3d/Schublade/Schublade.scad", preload=["examples/smooth_cubes.py"])
+    res = scq.process("/d/src/3d/Schublade/Schublade.scad", preload=["examples/smooth_cubes.py"]).build()
     show_object(res[0].wrapped,"Schub")
