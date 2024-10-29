@@ -45,17 +45,26 @@ class _MainEnv(SpecialEnv):
 
     def add_var(self, *a, **kw):
         "internal. Forwards to parent."
-        self.parent.add_var(*a, **kw)
+        self.parent.add_var(*a, _env=self, **kw)
+
+    def add_func(self, *a, **kw):
+        super().add_func(*a, _env=self, **kw)
 
     def add_func_(self, *a, **kw):
         "internal. Forwards to parent."
         self.parent.add_func_(*a, **kw)
+
+#   def add_mod(self, *a, **kw):
+#       super().add_mod(*a, _env=self, **kw)
 
     def add_mod_(self, *a, **kw):
         "internal. Forwards to parent."
         self.parent.add_mod_(*a, **kw)
 
 class Env(DynEnv):
+    """
+    This class supplies the top-level execution environment for BuildSCAD.
+    """
     def __init__(self):
         super().__init__(_MainEnv())
         self.vars["$fn"] = 999
@@ -68,14 +77,62 @@ class Env(DynEnv):
         self._tcache = {}
         self._tnext = 1
 
-    def set_var(self, name, value):
-        self.static.add_var(name, value)
+    def add_var(self, name, value:int|float|str):
+        """
+        Add a top-level variable.
 
-    def set_func(self, name, value):
+        Warns if the variable already exists.
+        """
+        if name[0] == "$":
+            raise RuntimeError("Use 'set_var' for dynamic variables")
+        else:
+            self.static.add_var(name, value)
+
+    def add_func(self, name: str, value: Callable):
+        """
+        Add a top-level function.
+
+        Warns if the function already exists.
+        """
         self.static.add_func_(name, value)
 
-    def set_mod(self, name, value):
+    def add_mod(self, name: str, value: int|float|str):
+        """
+        Add a top-level module.
+
+        Warns if the module already exists.
+        """
         self.static.add_mod_(name, value)
+
+    def set_var(self, name: str, value: int|float|str):
+        """
+        Update a top-level variable.
+
+        This method doesn't complain if the variable already exists.
+        You should use `add_var` instead, if possible.
+        """
+        if name[0] == "$":
+            self.vars[name] = value
+        else:
+            self.static.vars[name] = value
+
+    def set_func(self, name, value: Callable):
+        """
+        Update a top-level function.
+
+        This method doesn't complain if the function already exists.
+        You should use `add_func` instead, if possible.
+        """
+        self.static.funcs[name] = value
+
+    def set_mod(self, name, value: Callable):
+        """
+        Update a top-level module.
+
+        This method doesn't complain if the module already exists.
+        You should use `add_mod` instead, if possible.
+        """
+        self.static._mods[name] = value
 
     def parse(self, data:str):
         p = Parser(debug=False, reduce_tree=False)
@@ -169,7 +226,7 @@ def parse(f: Path | str, /) -> MainEnv:
     return env
 
 
-def process(f, /, preload=(), **kw):
+def process(f, /, preload=(), **kw) -> Env:
     """process an OpenSCAD file.
 
     Returns a build123d object with the result.
@@ -180,6 +237,8 @@ def process(f, /, preload=(), **kw):
 
     Keyword arguments can be used to override variables, function,s or
     modules.
+
+    Call the `build` method on the result to get (a composite of) the top-level object.
     """
     env = parse(f)
     for fn in preload:
@@ -205,4 +264,4 @@ def process(f, /, preload=(), **kw):
         else:
             env.set_var(k,v)
 
-    return env.build()
+    return env

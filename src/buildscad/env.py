@@ -71,11 +71,13 @@ class _Env(NullEnv):
             return res
         return self.parent.mod(name)
 
-    def add_var(self, name: str, body: Node):
+    def add_var(self, name: str, body: Node, *, _env:StaticEnv|None = None):
+        if _env is None:
+            _env = self
         if name in self.vars:
             warnings.warn(f"Dup assignment of variable {name !r}")
         else:
-            self.vars[name] = Variable(self, name, body)
+            self.vars[name] = Variable(_env , name, body)
 
     def add_func_(self, name:str, fn: Callable|Evalable) -> None:
         if name in self.funcs:
@@ -83,8 +85,10 @@ class _Env(NullEnv):
         else:
             self.funcs[name] = fn
 
-    def add_func(self, name:str, params: Node, body:Node):
-        self.add_func_(name, Function(self, name, params, body))
+    def add_func(self, name:str, params: Node, body:Node, *, _env:StaticEnv|None =None):
+        if _env is None:
+            _env = self
+        self.add_func_(name, Function(_env, name, params, body))
 
     def add_mod_(self, name:str, mod: Callable|Evalable) -> None:
         if name in self.mods:
