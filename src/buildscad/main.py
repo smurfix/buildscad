@@ -108,6 +108,15 @@ class Env(DynEnv):
         """
         self.static.add_mod_(name, value)
 
+    def _clean(self):
+        # After an external change, the values of calculated variables might be wrong.
+        # So we delete them here.
+
+        # Dynamic variables are context dependent.
+
+        for k in list(x for x in self.vars.keys() if x[0] != "$"):
+            del self.vars[k]
+
     def set_var(self, name: str, value: int | float | str):
         """
         Update a top-level variable.
@@ -119,6 +128,7 @@ class Env(DynEnv):
             self.vars[name] = value
         else:
             self.static.vars[name] = value
+        self._clean()
 
     def set_func(self, name, value: Callable):
         """
@@ -128,6 +138,7 @@ class Env(DynEnv):
         You should use `add_func` instead, if possible.
         """
         self.static.funcs[name] = value
+        self._clean()
 
     def set_mod(self, name, value: Callable):
         """
