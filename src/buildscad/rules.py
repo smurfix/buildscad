@@ -39,16 +39,19 @@ def _skip1(fn):
     fn.skip1 = True
     return fn
 
+
 @_skip1
 def _descend(self, n):
     arity(n, 1)
     return self.eval(n[0])
+
 
 class _CommonRules:
     def _e__list(self, n):
         res = None
         for nn in n:
             self.eval(nn)
+
 
 class _StaticRules(_CommonRules):
     def _e_Input(self, n):
@@ -111,7 +114,7 @@ class _StaticRules(_CommonRules):
 
     def _e_explicit_child(self, n):
         # foo() { … }
-        arity(n,3)
+        arity(n, 3)
         return self._encap_list(n[1])
 
     def _e_child_statement(self, n) -> None:
@@ -169,7 +172,7 @@ class _StaticRules(_CommonRules):
 
         return env._child_mod(n)
 
-    def _child_mod(self, n:Node):
+    def _child_mod(self, n: Node):
         assert n[1].rule_name == "child_statement"
         assert len(n[1]) == 1
 
@@ -238,6 +241,7 @@ class _StaticRules(_CommonRules):
                 n[0].value,
                 n[2],
             )
+
     def _e_EOF(self, n):
         pass
 
@@ -256,6 +260,7 @@ class _StaticRules(_CommonRules):
     def _e_if_statement(self, n):
         breakpoint()
 
+
 class _DynRules(_CommonRules):
     def _e_ifelse_statement(self, n):
         breakpoint()
@@ -270,10 +275,11 @@ class _DynRules(_CommonRules):
     def _e_mod_call(self, n):
         name = n[0].value
         if len(n) == 3:
-            a,k = (),{}
+            a, k = (), {}
         else:
             a, k = self.eval(n[2])
         return self.mod(name, *a, **k)
+
     _e_special_call = _e_mod_call
 
     def _e_arguments(self, n):
@@ -323,14 +329,13 @@ class _DynRules(_CommonRules):
 
     def _e_expr_fn(self, n):
         # build a function object
-        arity(n,4,5)
+        arity(n, 4, 5)
         if len(n) == 5:
             params = self.eval(n[2])
         else:
             params = ((), {})
         body = n[-1]
         return Function(self.static, "‹noname›", params, body)
-
 
     @_skip1
     def _e_expr_case(self, n):
@@ -486,7 +491,7 @@ class _DynRules(_CommonRules):
         if n[0][0].rule_name == "pr_Sym" and len(n) > 1 and n[1][0].rule_name == "add_args":
             args = n[1][0]
             if len(args) == 2:
-                a, k = (),{}
+                a, k = (), {}
             else:
                 a, k = self.eval(n[1])
             res = self.func(n[0][0].value, *a, **k)
@@ -540,7 +545,7 @@ class _DynRules(_CommonRules):
             return lambda x: x()
         arity(n, 3)
         a, k = self.eval(n[1])
-        return a,k
+        return a, k
 
     def _e_add_index(self, n):
         if len(n) == 2:
@@ -575,6 +580,7 @@ class _DynRules(_CommonRules):
     _e_vector_element = _descend
     _e_addon = _descend
 
+
 class XXX_EvalVar:
     """Holds the expression for a variable.
 
@@ -607,7 +613,7 @@ class XXX_EvalVar:
         arity(n, 3, 4)
 
         name = n[0].value
-        if len(n) == 3: # fn()
+        if len(n) == 3:  # fn()
             return self.mod(name)
 
         # fn( … )
@@ -723,7 +729,7 @@ class XXX_Eval:
             e._children = e.env["_e_children"] = []
         return e
 
-    def union(self) -> Shape|None:
+    def union(self) -> Shape | None:
         # ln = len(self._children) if self._children else 0
         res = None
         for n in self.env.work:
@@ -741,6 +747,6 @@ class XXX_Eval:
 
 # annoying recursive imports
 
-from .blocks import Function,Module,Variable,Statement,ParentStatement
+from .blocks import Function, Module, Variable, Statement, ParentStatement
 from .env import StaticEnv, SpecialEnv
 from .globals import ForStep

@@ -26,7 +26,11 @@ from build123d import export_step as exp
 )
 @click.option("-d", "--debug", is_flag=True)
 @click.option(
-    "-p", "--preload", type=click.Path(dir_okay=False, readable=True), multiple=True, help="",
+    "-p",
+    "--preload",
+    type=click.Path(dir_okay=False, readable=True),
+    multiple=True,
+    help="",
 )
 def main(infile, outfile, debug, preload):
     "interpret OpenSCAD, emit STEP"

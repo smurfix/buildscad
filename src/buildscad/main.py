@@ -10,11 +10,12 @@ from contextlib import contextmanager, nullcontext
 from itertools import chain
 
 from .peg import Parser
-from .env import StaticEnv,DynEnv,SpecialEnv
-from .globals import _Fns,_Mods
+from .env import StaticEnv, DynEnv, SpecialEnv
+from .globals import _Fns, _Mods
 from . import main_env
 
 from build123d import Shape, Axis
+
 
 class _MainEnv(SpecialEnv):
     "main environment with global variables"
@@ -29,17 +30,18 @@ class _MainEnv(SpecialEnv):
         env = StaticEnv()
         super().__init__(StaticEnv(env))
 
-        def collect(cls, d:dict[str,Callable]):
+        def collect(cls, d: dict[str, Callable]):
             for k in dir(cls):
                 if k[0] == "_":
                     continue
-                v = getattr(cls,k)
+                v = getattr(cls, k)
                 if not callable(v):
                     continue
-                setattr(v,"_env_", True)
+                setattr(v, "_env_", True)
                 if k[-1] == "_":
-                    k=k[:-1]
+                    k = k[:-1]
                 d[k] = v
+
         collect(_Mods, env.mods)
         collect(_Fns, env.funcs)
 
@@ -54,17 +56,19 @@ class _MainEnv(SpecialEnv):
         "internal. Forwards to parent."
         self.parent.add_func_(*a, **kw)
 
-#   def add_mod(self, *a, **kw):
-#       super().add_mod(*a, _env=self, **kw)
+    #   def add_mod(self, *a, **kw):
+    #       super().add_mod(*a, _env=self, **kw)
 
     def add_mod_(self, *a, **kw):
         "internal. Forwards to parent."
         self.parent.add_mod_(*a, **kw)
 
+
 class Env(DynEnv):
     """
     This class supplies the top-level execution environment for BuildSCAD.
     """
+
     def __init__(self):
         super().__init__(_MainEnv())
         self.vars["$fn"] = 999
@@ -77,7 +81,7 @@ class Env(DynEnv):
         self._tcache = {}
         self._tnext = 1
 
-    def add_var(self, name, value:int|float|str):
+    def add_var(self, name, value: int | float | str):
         """
         Add a top-level variable.
 
@@ -96,7 +100,7 @@ class Env(DynEnv):
         """
         self.static.add_func_(name, value)
 
-    def add_mod(self, name: str, value: int|float|str):
+    def add_mod(self, name: str, value: int | float | str):
         """
         Add a top-level module.
 
@@ -104,7 +108,7 @@ class Env(DynEnv):
         """
         self.static.add_mod_(name, value)
 
-    def set_var(self, name: str, value: int|float|str):
+    def set_var(self, name: str, value: int | float | str):
         """
         Update a top-level variable.
 
@@ -134,7 +138,7 @@ class Env(DynEnv):
         """
         self.static._mods[name] = value
 
-    def parse(self, data:str):
+    def parse(self, data: str):
         p = Parser(debug=False, reduce_tree=False)
         node = p.parse(data)
         self.static.eval(node)
@@ -143,7 +147,7 @@ class Env(DynEnv):
         return self.union(self.static.work)
 
     @contextmanager
-    def tracing(self, fn:Path|None=None):
+    def tracing(self, fn: Path | None = None):
         token = main_env.set(self)
         try:
             self.vars["$trace"] = True
@@ -157,7 +161,7 @@ class Env(DynEnv):
 
     def trace_(self, a, kw):
         def vn(obj):
-            if isinstance(obj,Axis):
+            if isinstance(obj, Axis):
                 if obj == Axis.X:
                     return "Axis.X"
                 if obj == Axis.Y:
@@ -166,22 +170,22 @@ class Env(DynEnv):
                     return "Axis.Z"
                 oid = id(obj)
                 if (tn := self._tcache.get(oid, None)) is None:
-                    tn,self._tnext = self._tnext, self._tnext+1
-                    self._tcache[oid] = tn,obj
+                    tn, self._tnext = self._tnext, self._tnext + 1
+                    self._tcache[oid] = tn, obj
                     print(f"o_{tn} = Axis{obj !r}")
                 return f"o_{tn}"
 
-            if isinstance(obj,Shape):
+            if isinstance(obj, Shape):
                 oid = id(obj)
                 if (tn := self._tcache.get(oid, None)) is None:
-                    tn,self._tnext = self._tnext, self._tnext+1
-                    self._tcache[oid] = tn,obj
+                    tn, self._tnext = self._tnext, self._tnext + 1
+                    self._tcache[oid] = tn, obj
                 else:
                     tn = tn[0]
                 return f"o_{tn}"
             return repr(obj)
 
-        res,op,*a = a
+        res, op, *a = a
         rs = f"{vn(res)} = "
         if op == "_add":
             print(f"{rs}{' + '.join(vn(x) for x in a)}")
@@ -197,7 +201,7 @@ class Env(DynEnv):
             rs += f"{vn(obj)}."
         rt = (vn(x) for x in a)
         if kw:
-            rt = chain(rt, (f"{k}={vn(v)}" for k,v in kw.items()))
+            rt = chain(rt, (f"{k}={vn(v)}" for k, v in kw.items()))
         print(f"{rs}{op}({', '.join(rt)})")
 
 
@@ -244,24 +248,24 @@ def process(f, /, preload=(), **kw) -> Env:
     for fn in preload:
         with open(fn) as fd:
             fc = fd.read()
-        d={}
+        d = {}
         exec(fc, d)
 
-        # TODO 
+        # TODO
         for n, f in d.items():
-            if n[0] == "_" and not isinstance(f,(int,float)):
+            if n[0] == "_" and not isinstance(f, (int, float)):
                 continue
             if callable(f):
-                env.static.set_func(n,f)
-                env.static.set_mod(n,f)
+                env.static.set_func(n, f)
+                env.static.set_mod(n, f)
             else:
-                env.static.set_var(n,f)
+                env.static.set_var(n, f)
 
     for k, v in kw.items():
         if callable(v):
-            env.set_func(k,v)
-            env.set_mod(k,v)
+            env.set_func(k, v)
+            env.set_mod(k, v)
         else:
-            env.set_var(k,v)
+            env.set_var(k, v)
 
     return env

@@ -10,34 +10,42 @@ from contextlib import suppress, nullcontext
 from buildscad import parse
 from build123d import Mesher, Shape
 
+
 class Res:
     tolerance = 0.001
     numeric = False
-    no_add=False
-    trace=False
+    no_add = False
+    trace = False
 
     def __init__(self):
         self._models = {}
+
     def add(self, name, model):
         if model is None:
             return
         self._models[name] = model
+
     @property
     def models(self):
-        for k,v in self._models.items():
-            yield (v,k)
+        for k, v in self._models.items():
+            yield (v, k)
+
     def __getitem__(self, x):
         return self._models[x]
+
     def __contains__(self, x):
         return x in self._models
+
     def __len__(self):
         return len(self._models)
 
+
 def testcase(i, may_skip=False):
     import tests.env_build123d as _env
+
     result = Res()
     params = {}
-    run=True
+    run = True
 
     pyf = Path(f"tests/models/{i :03d}.py")
     if pyf.exists():
@@ -47,12 +55,13 @@ def testcase(i, may_skip=False):
         env2.update(_env.__dict__)
         exec(pyc, env2, env2)
         if "result" in env2:
-            result.add("python",env2["result"]())
+            result.add("python", env2["result"]())
             result.numeric = True
         else:
             with suppress(KeyError):
                 if may_skip and env2["skip"]:
                     import pytest
+
                     pytest.skip("'skip' is set")
             with suppress(KeyError):
                 result.volume = env2["volume"]
@@ -74,7 +83,7 @@ def testcase(i, may_skip=False):
                 except KeyError:
                     res = None
                     for v in env2.values():
-                        if not isinstance(v,Shape) or v._dim != 3:
+                        if not isinstance(v, Shape) or v._dim != 3:
                             continue
                         if res is None:
                             res = v
@@ -85,7 +94,7 @@ def testcase(i, may_skip=False):
                 else:
                     if m2 is not None:
                         m2 = m2(**params)
-                result.add("python",m2)
+                result.add("python", m2)
 
     scadf = f"tests/models/{i :03d}.scad"
     env1 = parse(scadf)
@@ -103,10 +112,19 @@ def testcase(i, may_skip=False):
         if "check" in env1.static.mods:
             m1x = env1.mod("check", **params)
             result.add("check", m1x)
- 
+
     if run and not result.numeric:
-        with NamedTemporaryFile(suffix=".stl", delete=not result.trace and "pytest" not in sys.modules) as tf,NamedTemporaryFile(suffix=".txt") as out:
-            spawn(["openscad","--export-format=binstl", "-o",tf.name,scadf], check=True, stdin=DEVNULL, stdout=out, stderr=out, text=True)
+        with NamedTemporaryFile(
+            suffix=".stl", delete=not result.trace and "pytest" not in sys.modules
+        ) as tf, NamedTemporaryFile(suffix=".txt") as out:
+            spawn(
+                ["openscad", "--export-format=binstl", "-o", tf.name, scadf],
+                check=True,
+                stdin=DEVNULL,
+                stdout=out,
+                stderr=out,
+                text=True,
+            )
             m3 = Mesher().read(tf.name)
             res = None
             for m in m3:
@@ -115,7 +133,7 @@ def testcase(i, may_skip=False):
                 else:
                     res += m
 
-            result.add("openscad",res)
+            result.add("openscad", res)
             if result.trace:
                 print(f"o_stl = Mesher().read({tf.name !r})")
 

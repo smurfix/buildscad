@@ -44,7 +44,8 @@ from build123d import (
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    VEC = TypeVar("VEC", tuple[float,float] | tuple[float,float,float])
+    VEC = TypeVar("VEC", tuple[float, float] | tuple[float, float, float])
+
 
 class ForStep:
     def __init__(self, start, end, step=1):
@@ -82,6 +83,7 @@ class EnvEval:
 
     def __call__(self, /, env):
         from .eval import Eval
+
         token = env_.set(env)
         try:
             return Eval(env).eval(self.node)
@@ -127,24 +129,24 @@ class _Fns(DynEnv):
         except ValueError:
             return None
 
-    def rands(self, min: float, max:float, n:int, seed=None) -> float:
+    def rands(self, min: float, max: float, n: int, seed=None) -> float:
         if seed is None:
             r = random.random
         else:
-            r=random.Random(seed=seed).random
+            r = random.Random(seed=seed).random
 
-        rd = max-min
-        return [ r()*rd+min for _ in range(n)]
+        rd = max - min
+        return [r() * rd + min for _ in range(n)]
 
-    def cross(self, x:VEC, y: VEC):
+    def cross(self, x: VEC, y: VEC):
         if len(x) == 2 and len(y) == 2:
-            return x[0]*y[1] * x[1]*y[0]
+            return x[0] * y[1] * x[1] * y[0]
         elif len(x) == 3 and len(y) == 3:
             return [
-                    x[1]*y[2] - x[2]*y[1],
-                    x[2]*y[0] - x[0]*y[2],
-                    x[0]*y[1] - x[1]*y[0],
-                    ]
+                x[1] * y[2] - x[2] * y[1],
+                x[2] * y[0] - x[0] * y[2],
+                x[0] * y[1] - x[1] * y[0],
+            ]
         else:
             raise ValueError(f"Not two 2d or 3d vectors: {x !r} / {y !r}")
 
@@ -152,13 +154,13 @@ class _Fns(DynEnv):
         return abs(x)
 
     def sign(self, x: float) -> int:
-        return 0 if x == 0 else 1 if x>0 else -1
+        return 0 if x == 0 else 1 if x > 0 else -1
 
     def norm(self, *x: float) -> float:
-        return math.sqrt(sum(v*v for v in x))
+        return math.sqrt(sum(v * v for v in x))
 
     def pow(self, x: float, y: float) -> float:
-        return math.pow(x,y)
+        return math.pow(x, y)
 
     def min(self, *x: float) -> float:
         return min(*x)
@@ -172,7 +174,7 @@ class _Fns(DynEnv):
     def round(self, x: float) -> float:
         return round(x, 0)
 
-    def len(self, x: list|tuple|str) -> int:
+    def len(self, x: list | tuple | str) -> int:
         return len(x)
 
     def ceil(self, x: float) -> float:
@@ -208,23 +210,24 @@ class _Fns(DynEnv):
     def atan2(self, x: float, y: float) -> float:
         return math.atan2(x, y) * 180 / math.pi
 
-    def is_undef(self, x:Any) -> bool:
+    def is_undef(self, x: Any) -> bool:
         return x is None
 
-    def is_bool(self, x:Any) -> bool:
+    def is_bool(self, x: Any) -> bool:
         return isinstance(x, bool)
 
-    def is_num(self, x:Any) -> bool:
-        return isinstance(x (int,float))
+    def is_num(self, x: Any) -> bool:
+        return isinstance(x(int, float))
 
-    def is_string(self, x:Any) -> bool:
+    def is_string(self, x: Any) -> bool:
         return isinstance(x, str)
 
-    def is_list(self, x:Any) -> bool:
+    def is_list(self, x: Any) -> bool:
         return isinstance(x, (list, tuple))
 
-    def is_function(self, x:Any) -> bool:
+    def is_function(self, x: Any) -> bool:
         return callable(x) or isinstance(x, Function)
+
 
 class _Mods(DynEnv):
     def sphere(self, r=None, d=None):  # noqa:D102
@@ -237,7 +240,7 @@ class _Mods(DynEnv):
             warnings.warn("sphere: parameters are ambiguous")
 
         res = Sphere(r)
-        self.trace(res,"Sphere",r)
+        self.trace(res, "Sphere", r)
         return res
 
     def cube(self, size=1, center=False):  # noqa:D102
@@ -246,10 +249,10 @@ class _Mods(DynEnv):
         else:
             x, y, z = size
         res = Box(x, y, z)
-        self.trace(res,"Box",x,y,z)
+        self.trace(res, "Box", x, y, z)
         if not center:
             res2 = Pos(x / 2, y / 2, z / 2) * res
-            self.trace(res2,"Pos", x / 2, y / 2, z / 2, _mul=res)
+            self.trace(res2, "Pos", x / 2, y / 2, z / 2, _mul=res)
             res = res2
         return res
 
@@ -267,11 +270,15 @@ class _Mods(DynEnv):
 
             if vs:
                 var, stepper = vs.popitem()
-                if not isinstance(stepper,(list,tuple)):
-                    stp=stepper.step if isinstance(stepper.step, (int, float)) else self.eval(node=stepper.step)
+                if not isinstance(stepper, (list, tuple)):
+                    stp = (
+                        stepper.step
+                        if isinstance(stepper.step, (int, float))
+                        else self.eval(node=stepper.step)
+                    )
                     stepper = range(
                         self.eval(node=stepper.start),
-                        self.eval(node=stepper.end)+stp,
+                        self.eval(node=stepper.end) + stp,
                     )
                 for val in stepper:
                     venv.set_var(var, val)
@@ -284,11 +291,11 @@ class _Mods(DynEnv):
                     res = r
                 elif _intersect:
                     r2 = res & r
-                    self.trace(r2, "_inter",res,r)
+                    self.trace(r2, "_inter", res, r)
                     res = r2
                 else:
                     r2 = res + r
-                    self.trace(r2, "_add",res,r)
+                    self.trace(r2, "_add", res, r)
                     res = r2
 
         _for(**vars_)
@@ -342,7 +349,7 @@ class _Mods(DynEnv):
             return None
 
         res = ch.translate(v)
-        self.trace(res,"translate", v, _obj=ch)
+        self.trace(res, "translate", v, _obj=ch)
         return res
 
     def rotate(self, a=None, v=None) -> Shape:  # noqa:D102
@@ -350,39 +357,39 @@ class _Mods(DynEnv):
         if ch is None:
             return None
         if v is not None and v != [0, 0, 0]:
-            axis = Axis((0,0,0),tuple(v))
+            axis = Axis((0, 0, 0), tuple(v))
             res = ch.rotate(axis, a)
-            self.trace(res,"rotate", axis, a, _obj=ch)
+            self.trace(res, "rotate", axis, a, _obj=ch)
             return res
 
         elif isinstance(a, (float, int)):
             res = ch.rotate(Axis.Z, a)
-            self.trace(res,"rotate", Axis.Z, a, _obj=ch)
+            self.trace(res, "rotate", Axis.Z, a, _obj=ch)
             return res
 
         if a[0]:
             ch2 = ch.rotate(Axis.X, a[0])
-            self.trace(ch2,"rotate", Axis.X, a[0], _obj=ch)
+            self.trace(ch2, "rotate", Axis.X, a[0], _obj=ch)
             ch = ch2
         if a[1]:
             ch2 = ch.rotate(Axis.Y, a[1])
-            self.trace(ch2,"rotate", Axis.Y, a[1], _obj=ch)
+            self.trace(ch2, "rotate", Axis.Y, a[1], _obj=ch)
             ch = ch2
         if a[2]:
             ch2 = ch.rotate(Axis.Z, a[2])
-            self.trace(ch2,"rotate", Axis.Z, a[2], _obj=ch)
+            self.trace(ch2, "rotate", Axis.Z, a[2], _obj=ch)
             ch = ch2
         return ch
 
-    def difference(self) -> Shape|None:  # noqa:D102
+    def difference(self) -> Shape | None:  # noqa:D102
         ch = iter(self.children())
         res = next(ch)
         if res is not None:
             for obj in ch:
                 if obj is None:
                     continue
-                r = res-obj
-                self.trace(r, "_diff",res,obj)
+                r = res - obj
+                self.trace(r, "_diff", res, obj)
                 res = r
         return res
 
@@ -398,7 +405,7 @@ class _Mods(DynEnv):
                 res = obj
             else:
                 r = res & obj
-                self.trace(r, "_inter",res,obj)
+                self.trace(r, "_inter", res, obj)
                 res = r
         return res.clean()
 
@@ -414,11 +421,12 @@ class _Mods(DynEnv):
 
     def resolve_list(self) -> list:
         from .eval import Eval
+
         ev = Eval(Env(self))
         ev.eval(_ch)
         if idx is None:
             return ev.union()
-        res = [ ev.eval(c) for c in ev.env.work ]
+        res = [ev.eval(c) for c in ev.env.work]
 
         if idx is None:
             return res
@@ -437,7 +445,6 @@ class _Mods(DynEnv):
         return self.polyhedron(points, faces)
 
     def polyhedron(self, points, faces, convexity=None) -> Shape:
-
         points = [tuple(x) for x in points]
 
         def PL(path):
@@ -520,7 +527,9 @@ class _Mods(DynEnv):
             x, y = size
 
         return Rectangle(
-            x, y, align=(Align.CENTER, Align.CENTER) if center else (Align.MIN, Align.MIN),
+            x,
+            y,
+            align=(Align.CENTER, Align.CENTER) if center else (Align.MIN, Align.MIN),
         )
 
     def circle(self, r=None, d=None) -> Shape:

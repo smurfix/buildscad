@@ -15,9 +15,11 @@ main_env = _ctx.ContextVar("main_env")
 
 del _ctx
 
+
 class Assertion(AssertionError):
     """The interpreted code called a failing ``assert`` function."""
+
     pass
 
-from .main import parse, process
 
+from .main import parse, process

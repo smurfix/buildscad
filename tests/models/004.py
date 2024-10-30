@@ -1,2 +1,2 @@
-tolerance=0.2;
-test = Sphere(1);
+tolerance = 0.2
+test = Sphere(1)
