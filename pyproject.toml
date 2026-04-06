@@ -6,7 +6,6 @@ requires = [ "setuptools", "wheel", "setuptools-scm",]
 classifiers = [
 	"Intended Audience :: Developers",
 	"Programming Language :: Python :: 3",
-	"License :: OSI Approved",
 	"Development Status :: 3 - Alpha",
 	]
 dependencies = [
