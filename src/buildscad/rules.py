@@ -538,7 +538,7 @@ class _DynRules(_CommonRules):
         return ForStep(n[1], n[3], 1)
 
     def _e_pr_for3(self, n):
-        return ForStep(n[1], n[3], n[5])
+        return ForStep(n[1], n[5], n[3])
 
     def _e_add_args(self, n):
         if len(n) == 2:
