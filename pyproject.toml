@@ -12,7 +12,8 @@ classifiers = [
 dependencies = [
 	"build123d",
 	"click",
-	"simple-eval",
+	"simpleeval",
+	"arpeggio",
 	]
 dynamic = [ "version",]
 keywords = [ "buildscad", "cadquery", "build123d"]

@@ -326,7 +326,7 @@ class DynEnv(_Eval, NullEnv):
                 raise RuntimeError(f"Recursive variable {name !r}")
             return val
 
-        if name[0] == "$":
+        if True: # name[0] == "$":
             try:
                 vdef = self.dyn.var(name)
             except KeyError:

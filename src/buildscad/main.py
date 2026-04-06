@@ -154,9 +154,6 @@ class Env(DynEnv):
         node = p.parse(data)
         self.static.eval(node)
 
-    def run(self):
-        return self.union(self.static.work)
-
     @contextmanager
     def tracing(self, fn: Path | None = None):
         token = main_env.set(self)
