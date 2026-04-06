@@ -272,6 +272,7 @@ class _Mods(DynEnv):
                     stepper = range(
                         self.eval(node=stepper.start),
                         self.eval(node=stepper.end)+stp,
+                        stp,
                     )
                 for val in stepper:
                     venv.set_var(var, val)
