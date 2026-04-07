@@ -66,6 +66,8 @@ def testcase(i, may_skip=False):
                 params = env2["params"]
             with suppress(KeyError):
                 run = env2["run"]
+            with suppress(KeyError):
+                result.solids_count = env2["solids_count"]
             try:
                 res = env2["result"]
             except KeyError:
