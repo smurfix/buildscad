@@ -12,6 +12,12 @@ from buildscad._test import testcase as runner
 def _test(i):
     res = runner(i, may_skip=True)
 
+    if hasattr(res, 'solids_count'):
+        parser_shape = res["parser"]
+        actual = len(parser_shape.solids())
+        assert actual == res.solids_count, \
+            f"Expected {res.solids_count} solids, got {actual}"
+
     # Compare the two. They must be (a) same size,
     # (b) occupy the same space.
     # We don't subtract them because that's liable to confuse OCC.
